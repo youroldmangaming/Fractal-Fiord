@@ -1,0 +1,765 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fractal Asteroid with Craters</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            pointer-events: none;
+            z-index: 10;
+            border: 1px solid #555;
+        }
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.9);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            display: flex;
+            gap: 20px;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+            border: 1px solid #777;
+            pointer-events: auto;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .control-group label {
+            font-size: 14px;
+            color: #ccc;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .control-group input[type=range] {
+            width: 140px;
+            cursor: pointer;
+        }
+        .control-group span {
+            font-size: 13px;
+            color: #ffaa00;
+            font-weight: bold;
+        }
+        button {
+            background: #4caf50;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            letter-spacing: 1px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .panel-toggle {
+            background: #555;
+        }
+        .panel {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 280px;
+            backdrop-filter: blur(5px);
+            border: 1px solid #888;
+            z-index: 30;
+            display: none;
+            pointer-events: auto;
+        }
+        .panel.visible {
+            display: block;
+        }
+        .panel h3 {
+            margin-top: 0;
+            text-align: center;
+            color: #ddd;
+        }
+        .panel .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .panel .control-row label {
+            width: 110px;
+            color: #ccc;
+        }
+        .panel .control-row input[type=range] {
+            width: 120px;
+        }
+        .panel .control-row input[type=color] {
+            width: 60px;
+            height: 40px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        .panel .control-row span {
+            font-size: 12px;
+            color: #aaa;
+            width: 40px;
+            text-align: right;
+        }
+        hr {
+            border-color: #444;
+            margin: 15px 0;
+        }
+        .note {
+            font-size: 11px;
+            color: #aaa;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>⚫ Fractal Asteroid with Craters</h1>
+        <p>Size: <span id="size-display">65</span>×<span id="size-display2">65</span> vertices</p>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <label for="size">Resolution</label>
+            <input type="range" id="size" min="1" max="8" step="1" value="6">
+            <span id="size-value">65</span>
+        </div>
+        <div class="control-group">
+            <label for="smoothness">Roughness</label>
+            <input type="range" id="smoothness" min="0.2" max="2.5" step="0.1" value="0.8">
+            <span id="smooth-value">0.8</span>
+        </div>
+        <div class="control-group">
+            <label for="zscale">Height Scale</label>
+            <input type="range" id="zscale" min="50" max="500" step="10" value="200">
+            <span id="z-value">200</span>
+        </div>
+        <button id="generate">Generate New</button>
+        <button id="color-panel-toggle" class="panel-toggle">🎨 Surface</button>
+        <button id="crater-panel-toggle" class="panel-toggle">🌑 Craters</button>
+    </div>
+
+    <!-- Surface color panel -->
+    <div id="color-panel" class="panel">
+        <h3>Surface Colors</h3>
+        <div class="control-row">
+            <label>Low</label>
+            <input type="color" id="color-low" value="#444444">
+            <span>0–0.3</span>
+        </div>
+        <div class="control-row">
+            <label>Medium</label>
+            <input type="color" id="color-medium" value="#aa8866">
+            <span>0.3–0.6</span>
+        </div>
+        <div class="control-row">
+            <label>High</label>
+            <input type="color" id="color-high" value="#cccccc">
+            <span>0.6–0.8</span>
+        </div>
+        <div class="control-row">
+            <label>Peak</label>
+            <input type="color" id="color-peak" value="#ffffff">
+            <span>0.8–1.0</span>
+        </div>
+        <p style="font-size:12px; color:#aaa; text-align:center;">Colors update automatically</p>
+    </div>
+
+    <!-- Crater configuration panel -->
+    <div id="crater-panel" class="panel">
+        <h3>🌑 Crater Parameters</h3>
+        <div class="control-row">
+            <label>Number</label>
+            <input type="range" id="crater-count" min="0" max="60" step="1" value="20">
+            <span id="crater-count-value">20</span>
+        </div>
+        <div class="control-row">
+            <label>Depth Factor</label>
+            <input type="range" id="crater-depth" min="0.1" max="1.5" step="0.05" value="0.6">
+            <span id="crater-depth-value">0.60</span>
+        </div>
+        <div class="control-row">
+            <label>Min Radius</label>
+            <input type="range" id="crater-rmin" min="10" max="80" step="2" value="20">
+            <span id="crater-rmin-value">20</span>
+        </div>
+        <div class="control-row">
+            <label>Max Radius</label>
+            <input type="range" id="crater-rmax" min="20" max="150" step="2" value="70">
+            <span id="crater-rmax-value">70</span>
+        </div>
+        <div class="control-row">
+            <label>Rim Height</label>
+            <input type="range" id="crater-rim" min="0.0" max="0.8" step="0.05" value="0.25">
+            <span id="crater-rim-value">0.25</span>
+        </div>
+        <div class="control-row">
+            <label>Rim Width</label>
+            <input type="range" id="crater-rimwidth" min="0.0" max="0.5" step="0.02" value="0.15">
+            <span id="crater-rimwidth-value">0.15</span>
+        </div>
+        <button id="apply-craters" style="width:100%; background:#ff9800;">Apply Craters</button>
+        <p class="note">Craters are added to the current base terrain.<br>Adjust parameters and click Apply.</p>
+    </div>
+
+    <!-- Three.js import -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js';
+
+        // --------------------------------------------------------------
+        // Global variables
+        // --------------------------------------------------------------
+        let baseGrid = null;               // diamond-square generated grid (normalized -1..1)
+        let currentGrid = null;             // grid with craters applied (normalized -1..1)
+        let currentZScale = 200;
+        const terrainWidth = 400;           // world units
+
+        // Color stops (asteroid themed)
+        let currentColorStops = [
+            { t: 0.0, color: [0.267, 0.267, 0.267] },  // #444444
+            { t: 0.3, color: [0.667, 0.533, 0.4] },    // #aa8866
+            { t: 0.6, color: [0.8, 0.8, 0.8] },        // #cccccc
+            { t: 0.8, color: [1.0, 1.0, 1.0] },        // #ffffff
+            { t: 1.0, color: [1.0, 1.0, 1.0] }
+        ];
+
+        // Crater parameters (will be updated from UI)
+        let craterParams = {
+            count: 20,
+            depthFactor: 0.6,
+            radiusMin: 20,
+            radiusMax: 70,
+            rimHeightFactor: 0.25,
+            rimWidthFactor: 0.15      // fraction of radius
+        };
+
+        // --------------------------------------------------------------
+        // 1. Diamond‑Square algorithm (base terrain)
+        // --------------------------------------------------------------
+        function generateBaseTerrain(size, smoothness) {
+            const n = size + 1;
+            const grid = Array(n).fill().map(() => Array(n).fill(0));
+
+            grid[0][0] = Math.random() * 2 - 1;
+            grid[0][n-1] = Math.random() * 2 - 1;
+            grid[n-1][0] = Math.random() * 2 - 1;
+            grid[n-1][n-1] = Math.random() * 2 - 1;
+
+            let step = n - 1;
+            let scale = 1.0;
+
+            while (step > 1) {
+                const half = step / 2;
+
+                // Diamond step
+                for (let y = 0; y < n - 1; y += step) {
+                    for (let x = 0; x < n - 1; x += step) {
+                        const avg = (grid[y][x] + grid[y][x+step] + grid[y+step][x] + grid[y+step][x+step]) / 4;
+                        grid[y+half][x+half] = avg + (Math.random() * 2 - 1) * scale;
+                    }
+                }
+
+                // Square step
+                for (let y = 0; y < n; y += half) {
+                    for (let x = (y + half) % step; x < n; x += step) {
+                        let sum = 0, count = 0;
+                        if (x - half >= 0)      { sum += grid[y][x - half]; count++; }
+                        if (x + half < n)        { sum += grid[y][x + half]; count++; }
+                        if (y - half >= 0)      { sum += grid[y - half][x]; count++; }
+                        if (y + half < n)        { sum += grid[y + half][x]; count++; }
+                        
+                        const avg = sum / count;
+                        grid[y][x] = avg + (Math.random() * 2 - 1) * scale;
+                    }
+                }
+
+                step /= 2;
+                scale *= Math.pow(2, -smoothness);
+            }
+
+            return grid;
+        }
+
+        // --------------------------------------------------------------
+        // 2. Crater addition function
+        //    Modifies a copy of the base grid, returns new grid.
+        // --------------------------------------------------------------
+        function addCratersToGrid(baseGrid, params, width) {
+            const n = baseGrid.length; // size (segments+1)
+            const segments = n - 1;
+            
+            // Create deep copy of base grid
+            const grid = baseGrid.map(row => [...row]);
+
+            // Precompute world coordinates mapping for each grid point? We'll compute on the fly.
+
+            // Helper to get world coordinates from grid indices
+            const idxToWorld = (i, j) => {
+                const x = (i / segments - 0.5) * width;
+                const z = (j / segments - 0.5) * width; // note: j is row (y), but we treat as z
+                return { x, z };
+            };
+
+            // For each crater
+            for (let c = 0; c < params.count; c++) {
+                // Random center in world coordinates within the terrain square
+                const cx = (Math.random() - 0.5) * width;
+                const cz = (Math.random() - 0.5) * width;
+                const radius = params.radiusMin + Math.random() * (params.radiusMax - params.radiusMin);
+                const rimWidth = radius * params.rimWidthFactor;
+                const depth = params.depthFactor * currentZScale * 0.5; // world units, scaled by zScale
+                const rimHeight = params.rimHeightFactor * depth;
+
+                // Determine grid bounds that could be affected (add a margin)
+                const worldMinX = cx - radius - rimWidth;
+                const worldMaxX = cx + radius + rimWidth;
+                const worldMinZ = cz - radius - rimWidth;
+                const worldMaxZ = cz + radius + rimWidth;
+
+                // Convert to grid index range (clamped)
+                const iMin = Math.max(0, Math.floor(((worldMinX / width) + 0.5) * segments));
+                const iMax = Math.min(segments, Math.ceil(((worldMaxX / width) + 0.5) * segments));
+                const jMin = Math.max(0, Math.floor(((worldMinZ / width) + 0.5) * segments));
+                const jMax = Math.min(segments, Math.ceil(((worldMaxZ / width) + 0.5) * segments));
+
+                for (let j = jMin; j <= jMax; j++) {
+                    for (let i = iMin; i <= iMax; i++) {
+                        const world = idxToWorld(i, j);
+                        const dx = world.x - cx;
+                        const dz = world.z - cz;
+                        const dist = Math.sqrt(dx*dx + dz*dz);
+
+                        let delta = 0;
+                        if (dist <= radius) {
+                            // Inner bowl: parabolic depression
+                            // delta = -depth * (1 - (dist/radius)^2)
+                            const t = dist / radius;
+                            delta = -depth * (1 - t*t);
+                        } else if (dist <= radius + rimWidth) {
+                            // Raised rim: smooth hump
+                            const t = (dist - radius) / rimWidth; // 0 to 1
+                            // cosine or quadratic falloff
+                            delta = rimHeight * (1 - t*t); // parabolic decay
+                        }
+
+                        // Apply delta to grid (height in world units) - but grid stores normalized values
+                        // We need to convert delta (world) to normalized delta.
+                        // normalized = world / currentZScale
+                        const normDelta = delta / currentZScale;
+                        grid[j][i] += normDelta; // j is row (y/z), i is column (x)
+                    }
+                }
+            }
+
+            return grid;
+        }
+
+        // --------------------------------------------------------------
+        // 3. Color helper
+        // --------------------------------------------------------------
+        function heightToColor(h, minH, maxH) {
+            let t = (h - minH) / (maxH - minH);
+            t = Math.max(0, Math.min(1, t));
+
+            let i = 0;
+            while (i < currentColorStops.length - 1 && currentColorStops[i+1].t < t) i++;
+            if (i === currentColorStops.length - 1) i = currentColorStops.length - 2;
+
+            const s1 = currentColorStops[i];
+            const s2 = currentColorStops[i+1];
+            const localT = (t - s1.t) / (s2.t - s1.t);
+
+            const r = s1.color[0] + (s2.color[0] - s1.color[0]) * localT;
+            const g = s1.color[1] + (s2.color[1] - s1.color[1]) * localT;
+            const b = s1.color[2] + (s2.color[2] - s1.color[2]) * localT;
+
+            return [r, g, b];
+        }
+
+        // --------------------------------------------------------------
+        // 4. Three.js setup
+        // --------------------------------------------------------------
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000); // Black space
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(500, 300, 500);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.2;
+        controls.enableZoom = true;
+        controls.maxPolarAngle = Math.PI / 2;
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        mainLight.position.set(400, 500, 400);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.width = 1024;
+        mainLight.shadow.mapSize.height = 1024;
+        const d = 600;
+        mainLight.shadow.camera.left = -d;
+        mainLight.shadow.camera.right = d;
+        mainLight.shadow.camera.top = d;
+        mainLight.shadow.camera.bottom = -d;
+        mainLight.shadow.camera.near = 1;
+        mainLight.shadow.camera.far = 1000;
+        scene.add(mainLight);
+
+        const backLight = new THREE.DirectionalLight(0x6688aa, 0.8);
+        backLight.position.set(-400, 200, -400);
+        scene.add(backLight);
+
+        const bottomLight = new THREE.PointLight(0x335577, 0.5);
+        bottomLight.position.set(0, -300, 0);
+        scene.add(bottomLight);
+
+        // Starfield
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsCount = 2000;
+        const starsPositions = new Float32Array(starsCount * 3);
+        for (let i = 0; i < starsCount * 3; i += 3) {
+            const r = 800 + Math.random() * 200;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            starsPositions[i] = Math.sin(phi) * Math.cos(theta) * r;
+            starsPositions[i+1] = Math.sin(phi) * Math.sin(theta) * r;
+            starsPositions[i+2] = Math.cos(phi) * r;
+        }
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: true });
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+
+        let terrainMesh = null;
+
+        // --------------------------------------------------------------
+        // 5. Terrain mesh creation (from currentGrid)
+        // --------------------------------------------------------------
+        function createTerrainMesh(grid, zScale) {
+            const segments = grid.length - 1;
+            const width = terrainWidth;
+            const height = terrainWidth;
+
+            const verticesCount = (segments + 1) * (segments + 1);
+            const positions = new Float32Array(verticesCount * 3);
+            
+            const heights = [];
+            for (let y = 0; y <= segments; y++) {
+                for (let x = 0; x <= segments; x++) {
+                    const i = y * (segments + 1) + x;
+                    const px = (x / segments - 0.5) * width;
+                    const pz = (y / segments - 0.5) * height;
+                    const py = grid[y][x] * zScale;
+                    positions[i*3] = px;
+                    positions[i*3+1] = py;
+                    positions[i*3+2] = pz;
+                    heights.push(py);
+                }
+            }
+
+            const minH = Math.min(...heights);
+            const maxH = Math.max(...heights);
+
+            const colors = new Float32Array(verticesCount * 3);
+            for (let y = 0; y <= segments; y++) {
+                for (let x = 0; x <= segments; x++) {
+                    const i = y * (segments + 1) + x;
+                    const h = grid[y][x] * zScale;
+                    const [r, g, b] = heightToColor(h, minH, maxH);
+                    colors[i*3] = r;
+                    colors[i*3+1] = g;
+                    colors[i*3+2] = b;
+                }
+            }
+
+            const indices = [];
+            for (let y = 0; y < segments; y++) {
+                for (let x = 0; x < segments; x++) {
+                    const a = y * (segments + 1) + x;
+                    const b = y * (segments + 1) + x + 1;
+                    const c = (y + 1) * (segments + 1) + x;
+                    const d = (y + 1) * (segments + 1) + x + 1;
+
+                    indices.push(a, c, b);
+                    indices.push(b, c, d);
+                }
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.7,
+                metalness: 0.2,
+                emissive: 0x000000,
+                flatShading: false
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        // Update terrain colors (after color stop changes)
+        function updateMeshColors() {
+            if (!terrainMesh || !currentGrid) return;
+
+            const geometry = terrainMesh.geometry;
+            const segments = currentGrid.length - 1;
+            const verticesCount = (segments + 1) * (segments + 1);
+
+            const heights = [];
+            for (let y = 0; y <= segments; y++) {
+                for (let x = 0; x <= segments; x++) {
+                    heights.push(currentGrid[y][x] * currentZScale);
+                }
+            }
+            const minH = Math.min(...heights);
+            const maxH = Math.max(...heights);
+
+            const colors = new Float32Array(verticesCount * 3);
+            for (let y = 0; y <= segments; y++) {
+                for (let x = 0; x <= segments; x++) {
+                    const i = y * (segments + 1) + x;
+                    const h = currentGrid[y][x] * currentZScale;
+                    const [r, g, b] = heightToColor(h, minH, maxH);
+                    colors[i*3] = r;
+                    colors[i*3+1] = g;
+                    colors[i*3+2] = b;
+                }
+            }
+
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.attributes.color.needsUpdate = true;
+        }
+
+        // --------------------------------------------------------------
+        // 6. UI and panels
+        // --------------------------------------------------------------
+        // Main controls
+        const sizeInput = document.getElementById('size');
+        const smoothInput = document.getElementById('smoothness');
+        const zInput = document.getElementById('zscale');
+        const sizeVal = document.getElementById('size-value');
+        const smoothVal = document.getElementById('smooth-value');
+        const zVal = document.getElementById('z-value');
+        const generateBtn = document.getElementById('generate');
+        const sizeDisplay = document.getElementById('size-display');
+        const sizeDisplay2 = document.getElementById('size-display2');
+
+        // Color panel
+        const colorPanel = document.getElementById('color-panel');
+        const colorLow = document.getElementById('color-low');
+        const colorMedium = document.getElementById('color-medium');
+        const colorHigh = document.getElementById('color-high');
+        const colorPeak = document.getElementById('color-peak');
+
+        // Crater panel
+        const craterPanel = document.getElementById('crater-panel');
+        const craterCount = document.getElementById('crater-count');
+        const craterCountVal = document.getElementById('crater-count-value');
+        const craterDepth = document.getElementById('crater-depth');
+        const craterDepthVal = document.getElementById('crater-depth-value');
+        const craterRmin = document.getElementById('crater-rmin');
+        const craterRminVal = document.getElementById('crater-rmin-value');
+        const craterRmax = document.getElementById('crater-rmax');
+        const craterRmaxVal = document.getElementById('crater-rmax-value');
+        const craterRim = document.getElementById('crater-rim');
+        const craterRimVal = document.getElementById('crater-rim-value');
+        const craterRimWidth = document.getElementById('crater-rimwidth');
+        const craterRimWidthVal = document.getElementById('crater-rimwidth-value');
+        const applyCratersBtn = document.getElementById('apply-craters');
+
+        // Toggle panels
+        document.getElementById('color-panel-toggle').addEventListener('click', () => {
+            colorPanel.classList.toggle('visible');
+            craterPanel.classList.remove('visible');
+        });
+        document.getElementById('crater-panel-toggle').addEventListener('click', () => {
+            craterPanel.classList.toggle('visible');
+            colorPanel.classList.remove('visible');
+        });
+
+        // Hex to RGB
+        function hexToRgb(hex) {
+            const r = parseInt(hex.slice(1,3), 16) / 255;
+            const g = parseInt(hex.slice(3,5), 16) / 255;
+            const b = parseInt(hex.slice(5,7), 16) / 255;
+            return [r, g, b];
+        }
+
+        // Update color stops from UI
+        function updateColorStopsFromUI() {
+            currentColorStops[0].color = hexToRgb(colorLow.value);
+            currentColorStops[1].color = hexToRgb(colorMedium.value);
+            currentColorStops[2].color = hexToRgb(colorHigh.value);
+            currentColorStops[3].color = hexToRgb(colorPeak.value);
+            currentColorStops[4].color = hexToRgb(colorPeak.value);
+            updateMeshColors();
+        }
+
+        colorLow.addEventListener('input', updateColorStopsFromUI);
+        colorMedium.addEventListener('input', updateColorStopsFromUI);
+        colorHigh.addEventListener('input', updateColorStopsFromUI);
+        colorPeak.addEventListener('input', updateColorStopsFromUI);
+
+        // Update crater labels and params object
+        function updateCraterLabels() {
+            craterCountVal.textContent = craterCount.value;
+            craterDepthVal.textContent = parseFloat(craterDepth.value).toFixed(2);
+            craterRminVal.textContent = craterRmin.value;
+            craterRmaxVal.textContent = craterRmax.value;
+            craterRimVal.textContent = parseFloat(craterRim.value).toFixed(2);
+            craterRimWidthVal.textContent = parseFloat(craterRimWidth.value).toFixed(2);
+            
+            craterParams.count = parseInt(craterCount.value);
+            craterParams.depthFactor = parseFloat(craterDepth.value);
+            craterParams.radiusMin = parseInt(craterRmin.value);
+            craterParams.radiusMax = parseInt(craterRmax.value);
+            craterParams.rimHeightFactor = parseFloat(craterRim.value);
+            craterParams.rimWidthFactor = parseFloat(craterRimWidth.value);
+        }
+
+        craterCount.addEventListener('input', updateCraterLabels);
+        craterDepth.addEventListener('input', updateCraterLabels);
+        craterRmin.addEventListener('input', updateCraterLabels);
+        craterRmax.addEventListener('input', updateCraterLabels);
+        craterRim.addEventListener('input', updateCraterLabels);
+        craterRimWidth.addEventListener('input', updateCraterLabels);
+
+        // Apply craters to current base grid and refresh mesh
+        function applyCratersAndUpdate() {
+            if (!baseGrid) return;
+            currentGrid = addCratersToGrid(baseGrid, craterParams, terrainWidth);
+            
+            if (terrainMesh) scene.remove(terrainMesh);
+            terrainMesh = createTerrainMesh(currentGrid, currentZScale);
+            scene.add(terrainMesh);
+        }
+
+        applyCratersBtn.addEventListener('click', applyCratersAndUpdate);
+
+        // Update labels for main controls
+        function updateLabels() {
+            const segs = Math.pow(2, parseInt(sizeInput.value));
+            sizeVal.textContent = segs + 1;
+            sizeDisplay.textContent = segs + 1;
+            sizeDisplay2.textContent = segs + 1;
+            smoothVal.textContent = parseFloat(smoothInput.value).toFixed(1);
+            zVal.textContent = zInput.value;
+        }
+
+        // Generate new base terrain and then apply craters
+        function generateAndShow() {
+            const segs = Math.pow(2, parseInt(sizeInput.value));
+            const smooth = parseFloat(smoothInput.value);
+            currentZScale = parseFloat(zInput.value);
+
+            baseGrid = generateBaseTerrain(segs, smooth);
+            // Apply craters with current params
+            currentGrid = addCratersToGrid(baseGrid, craterParams, terrainWidth);
+            
+            if (terrainMesh) scene.remove(terrainMesh);
+            terrainMesh = createTerrainMesh(currentGrid, currentZScale);
+            scene.add(terrainMesh);
+
+            updateLabels();
+        }
+
+        // Update Z-scale without regenerating heightmap (but we need to reapply craters because depth depends on zScale)
+        function updateZOnly() {
+            if (!baseGrid) return;
+            currentZScale = parseFloat(zInput.value);
+            
+            // Reapply craters because depth uses currentZScale
+            currentGrid = addCratersToGrid(baseGrid, craterParams, terrainWidth);
+            
+            if (terrainMesh) scene.remove(terrainMesh);
+            terrainMesh = createTerrainMesh(currentGrid, currentZScale);
+            scene.add(terrainMesh);
+
+            updateLabels();
+        }
+
+        sizeInput.addEventListener('input', updateLabels);
+        smoothInput.addEventListener('input', updateLabels);
+        zInput.addEventListener('input', updateZOnly);
+        generateBtn.addEventListener('click', generateAndShow);
+
+        // Initialize with some craters
+        updateCraterLabels(); // sync labels
+        generateAndShow();
+
+        // --------------------------------------------------------------
+        // 7. Animation loop
+        // --------------------------------------------------------------
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>
