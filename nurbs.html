@@ -1,0 +1,1228 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <title>NURBS Terrain</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0b0f1a; overflow: hidden; font-family: 'Space Mono', monospace; }
+    canvas { display: block; }
+
+    #info {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.28); font-size: 10px; letter-spacing: 0.15em;
+      text-align: center; pointer-events: none; z-index: 10; text-transform: uppercase;
+      white-space: nowrap;
+    }
+    #hint {
+      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.2); font-size: 10px; letter-spacing: 0.1em;
+      pointer-events: none; text-align: center; line-height: 1.9; white-space: nowrap;
+    }
+    #hint span { color: rgba(100,220,255,0.5); }
+
+    #cp-panel {
+      display: none;
+      position: fixed; top: 16px; right: 20px;
+      background: rgba(8,12,22,0.94);
+      border: 1px solid rgba(100,220,255,0.22);
+      padding: 14px 16px; z-index: 20;
+      color: rgba(100,220,255,0.7); font-size: 10px;
+      letter-spacing: 0.1em; min-width: 200px;
+    }
+    #cp-panel .panel-title {
+      text-transform: uppercase; color: rgba(100,220,255,0.4);
+      margin-bottom: 12px; border-bottom: 1px solid rgba(100,220,255,0.1);
+      padding-bottom: 7px; font-size: 9px;
+    }
+    #cp-panel .row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+    #cp-panel .row label {
+      width: 12px; text-transform: uppercase;
+      color: rgba(100,220,255,0.5); flex-shrink: 0; font-size: 11px;
+    }
+    #cp-panel input[type="number"] {
+      background: rgba(100,220,255,0.05);
+      border: 1px solid rgba(100,220,255,0.16);
+      color: #fff; font-family: 'Space Mono', monospace;
+      font-size: 10px; padding: 4px 7px; outline: none; width: 100%;
+      -moz-appearance: textfield;
+    }
+    #cp-panel input[type="number"]::-webkit-outer-spin-button,
+    #cp-panel input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    #cp-panel input[type="number"]:focus {
+      border-color: rgba(100,220,255,0.5); background: rgba(100,220,255,0.09);
+    }
+    #cp-panel input[type="range"] { accent-color: #44ccff; cursor: pointer; width: 100%; }
+    #cp-panel .divider { height: 1px; background: rgba(100,220,255,0.1); margin: 10px 0; }
+    #cp-panel .weight-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: -3px; font-size: 9px;
+    }
+    #cp-panel .weight-row .lbl { color: rgba(100,220,255,0.35); }
+    #cp-panel .weight-row #weight-val { color: #fff; }
+
+    /* Grid config controls */
+    #grid-controls {
+      position: fixed; top: 16px; left: 20px;
+      background: rgba(8,12,22,0.94);
+      border: 1px solid rgba(100,220,255,0.22);
+      padding: 14px 16px; z-index: 20;
+      color: rgba(100,220,255,0.55); font-size: 10px; letter-spacing: 0.1em;
+      min-width: 180px;
+    }
+    #grid-controls .gc-title {
+      text-transform: uppercase; color: rgba(100,220,255,0.35);
+      margin-bottom: 10px; border-bottom: 1px solid rgba(100,220,255,0.1);
+      padding-bottom: 7px; font-size: 9px;
+    }
+    #grid-controls .gc-row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+    #grid-controls .gc-row label { flex: 1; font-size: 9px; text-transform: uppercase; }
+    #grid-controls select, #grid-controls button {
+      background: rgba(100,220,255,0.06);
+      border: 1px solid rgba(100,220,255,0.18);
+      color: #fff; font-family: 'Space Mono', monospace;
+      font-size: 9px; padding: 4px 7px; cursor: pointer; outline: none;
+    }
+    #grid-controls select { width: 70px; }
+    #grid-controls button {
+      width: 100%; margin-top: 4px; letter-spacing: 0.1em;
+      text-transform: uppercase; transition: background 0.15s;
+    }
+    #grid-controls button:hover { background: rgba(100,220,255,0.15); }
+    #grid-controls button.on  { background: rgba(100,220,255,0.18); border-color: rgba(100,220,255,0.6); color: #7DF9FF; }
+    #grid-controls .divider { height: 1px; background: rgba(100,220,255,0.1); margin: 10px 0; }
+    .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 2px; }
+    .toggle-grid button { margin-top: 0; }
+
+    /* Lighting + color panel */
+    #light-controls {
+      position: fixed; bottom: 60px; left: 20px;
+      background: rgba(8,12,22,0.94);
+      border: 1px solid rgba(100,220,255,0.22);
+      padding: 14px 16px; z-index: 20;
+      color: rgba(100,220,255,0.55); font-size: 10px; letter-spacing: 0.1em;
+      min-width: 220px;
+    }
+    #light-controls .gc-title {
+      text-transform: uppercase; color: rgba(100,220,255,0.35);
+      margin-bottom: 10px; border-bottom: 1px solid rgba(100,220,255,0.1);
+      padding-bottom: 7px; font-size: 9px;
+    }
+    #light-controls .lc-row {
+      display: flex; align-items: center; margin-bottom: 8px; gap: 8px;
+    }
+    #light-controls .lc-row label {
+      font-size: 9px; text-transform: uppercase; flex-shrink: 0; width: 68px;
+      color: rgba(100,220,255,0.5);
+    }
+    #light-controls input[type="range"] {
+      flex: 1; accent-color: #44ccff; cursor: pointer;
+    }
+    #light-controls input[type="color"] {
+      width: 34px; height: 22px; border: 1px solid rgba(100,220,255,0.25);
+      background: none; cursor: pointer; padding: 1px; flex-shrink: 0;
+      border-radius: 2px;
+    }
+    #light-controls .val {
+      font-size: 9px; color: rgba(255,255,255,0.5); width: 28px; text-align: right; flex-shrink:0;
+    }
+    #light-controls .divider { height: 1px; background: rgba(100,220,255,0.1); margin: 10px 0; }
+
+    /* Animation panel */
+    #anim-controls {
+      position: fixed; bottom: 60px; right: 20px;
+      background: rgba(8,12,22,0.94);
+      border: 1px solid rgba(100,220,255,0.22);
+      padding: 14px 16px; z-index: 20;
+      color: rgba(100,220,255,0.55); font-size: 10px; letter-spacing: 0.1em;
+      min-width: 230px; max-height: 80vh; overflow-y: auto;
+    }
+    #anim-controls .gc-title {
+      text-transform: uppercase; color: rgba(100,220,255,0.35);
+      margin-bottom: 10px; border-bottom: 1px solid rgba(100,220,255,0.1);
+      padding-bottom: 7px; font-size: 9px;
+    }
+    #anim-controls .ac-row {
+      display: flex; align-items: center; margin-bottom: 8px; gap: 8px;
+    }
+    #anim-controls .ac-row label {
+      font-size: 9px; text-transform: uppercase; flex-shrink: 0; width: 72px;
+      color: rgba(100,220,255,0.5);
+    }
+    #anim-controls input[type="range"] { flex: 1; accent-color: #44ccff; cursor: pointer; }
+    #anim-controls select {
+      flex: 1; background: rgba(100,220,255,0.06);
+      border: 1px solid rgba(100,220,255,0.18);
+      color: #fff; font-family: 'Space Mono', monospace;
+      font-size: 9px; padding: 3px 5px; cursor: pointer; outline: none;
+    }
+    #anim-controls .val {
+      font-size: 9px; color: rgba(255,255,255,0.5); width: 34px; text-align: right; flex-shrink:0;
+    }
+    #anim-controls .divider { height: 1px; background: rgba(100,220,255,0.1); margin: 10px 0; }
+    #anim-controls .play-row {
+      display: flex; gap: 6px; margin-bottom: 10px;
+    }
+    #anim-controls .play-row button {
+      flex: 1; background: rgba(100,220,255,0.06);
+      border: 1px solid rgba(100,220,255,0.18);
+      color: #fff; font-family: 'Space Mono', monospace;
+      font-size: 9px; padding: 5px 4px; cursor: pointer; outline: none;
+      text-transform: uppercase; letter-spacing: 0.08em; transition: background 0.15s;
+    }
+    #anim-controls .play-row button:hover { background: rgba(100,220,255,0.15); }
+    #anim-controls .play-row button.on {
+      background: rgba(100,220,255,0.2); border-color: rgba(100,220,255,0.7); color: #7DF9FF;
+    }
+    #anim-controls .axis-head {
+      font-size: 9px; color: rgba(100,220,255,0.6); text-transform: uppercase;
+      letter-spacing: 0.15em; margin-bottom: 8px; margin-top: 4px;
+    }
+    #anim-controls .expr-row {
+      display: flex; flex-direction: column; margin-bottom: 8px; gap: 4px;
+    }
+    #anim-controls .expr-row label {
+      font-size: 9px; text-transform: uppercase; color: rgba(100,220,255,0.5);
+    }
+    #anim-controls .expr-row input[type="text"] {
+      background: rgba(100,220,255,0.06);
+      border: 1px solid rgba(100,220,255,0.2);
+      color: #fff; font-family: 'Space Mono', monospace;
+      font-size: 9px; padding: 5px 7px; outline: none; width: 100%;
+      letter-spacing: 0.05em;
+    }
+    #anim-controls .expr-row input[type="text"]:focus {
+      border-color: rgba(100,220,255,0.6); background: rgba(100,220,255,0.1);
+    }
+    #anim-controls .expr-row input[type="text"].error {
+      border-color: rgba(255,80,80,0.7); color: #ff8888;
+    }
+    #anim-controls .expr-hint {
+      font-size: 8px; color: rgba(100,220,255,0.3); margin-top: 2px; line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<div id="info">NURBS Terrain &nbsp;·&nbsp; <span id="grid-label">8×8 control points</span></div>
+<div id="hint">
+  <span>left-drag</span> orbit &nbsp;·&nbsp; <span>right-drag</span> pan &nbsp;·&nbsp; <span>scroll</span> zoom<br>
+  <span>click sphere</span> select &nbsp;·&nbsp; <span>drag sphere</span> move &nbsp;·&nbsp; edit XYZ &amp; weight →
+</div>
+
+<!-- Left: grid config -->
+<div id="grid-controls">
+  <div class="gc-title">Grid Config</div>
+  <div class="gc-row">
+    <label>Points/side</label>
+    <select id="sel-n">
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="8">8</option>
+      <option value="10">10</option>
+      <option value="12" selected>12</option>
+    </select>
+  </div>
+  <div class="gc-row">
+    <label>Size</label>
+    <select id="sel-size">
+      <option value="2000">2 000</option>
+      <option value="5000">5 000</option>
+      <option value="10000">10 000</option>
+      <option value="20000" selected>20 000</option>
+    </select>
+  </div>
+  <div class="gc-row">
+    <label>Resolution</label>
+    <select id="sel-res">
+      <option value="40">40</option>
+      <option value="80">80</option>
+      <option value="120">120</option>
+      <option value="200" selected>200</option>
+    </select>
+  </div>
+  <button id="btn-apply">Apply</button>
+  <button id="btn-flatten" style="margin-top:6px">Flatten All</button>
+  <div class="divider"></div>
+  <div class="gc-title" style="margin-bottom:8px">Visibility</div>
+  <div class="toggle-grid">
+    <button id="tog-spheres" class="on">● Spheres</button>
+    <button id="tog-lines"   class="on">⟋ Lines</button>
+    <button id="tog-texture" class="on">◈ Texture</button>
+    <button id="tog-wire"    class="on">⊞ Wireframe</button>
+    <button id="tog-labels"  style="grid-column:1/-1">⌗ CP Labels</button>
+  </div>
+</div>
+
+<!-- Bottom-left: lighting + color -->
+<div id="light-controls">
+  <div class="gc-title">Surface Color</div>
+  <div class="lc-row">
+    <label>Base Color</label>
+    <input type="color" id="col-surface" value="#3a7abd">
+    <span class="val" id="col-surface-hex">#3a7abd</span>
+  </div>
+  <div class="lc-row">
+    <label>Wireframe</label>
+    <input type="color" id="col-wire" value="#ffffff">
+  </div>
+  <div class="lc-row">
+    <label>Lattice</label>
+    <input type="color" id="col-lattice" value="#ffaa00">
+  </div>
+  <div class="lc-row">
+    <label>Sky</label>
+    <input type="color" id="col-sky" value="#0b0f1a">
+  </div>
+
+  <div class="divider"></div>
+  <div class="gc-title">Lighting</div>
+
+  <div class="lc-row">
+    <label>Ambient</label>
+    <input type="range" id="lit-ambient" min="0" max="5" step="0.05" value="2.0">
+    <span class="val" id="val-ambient">2.0</span>
+  </div>
+  <div class="lc-row">
+    <label>Ambient Col</label>
+    <input type="color" id="col-ambient" value="#334466">
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="lc-row">
+    <label>Sun Intensity</label>
+    <input type="range" id="lit-dir" min="0" max="5" step="0.05" value="1.4">
+    <span class="val" id="val-dir">1.4</span>
+  </div>
+  <div class="lc-row">
+    <label>Sun Color</label>
+    <input type="color" id="col-dir" value="#ffffff">
+  </div>
+  <div class="lc-row">
+    <label>Sun X</label>
+    <input type="range" id="lit-dir-x" min="-5" max="5" step="0.1" value="1">
+    <span class="val" id="val-dir-x">1.0</span>
+  </div>
+  <div class="lc-row">
+    <label>Sun Y</label>
+    <input type="range" id="lit-dir-y" min="-5" max="5" step="0.1" value="2">
+    <span class="val" id="val-dir-y">2.0</span>
+  </div>
+  <div class="lc-row">
+    <label>Sun Z</label>
+    <input type="range" id="lit-dir-z" min="-5" max="5" step="0.1" value="1">
+    <span class="val" id="val-dir-z">1.0</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="lc-row">
+    <label>Fill A Int</label>
+    <input type="range" id="lit-filla" min="0" max="5" step="0.05" value="2.0">
+    <span class="val" id="val-filla">2.0</span>
+  </div>
+  <div class="lc-row">
+    <label>Fill A Col</label>
+    <input type="color" id="col-filla" value="#4488ff">
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="lc-row">
+    <label>Fill B Int</label>
+    <input type="range" id="lit-fillb" min="0" max="5" step="0.05" value="1.5">
+    <span class="val" id="val-fillb">1.5</span>
+  </div>
+  <div class="lc-row">
+    <label>Fill B Col</label>
+    <input type="color" id="col-fillb" value="#ff4488">
+  </div>
+</div>
+
+<!-- Bottom-right: animation -->
+<div id="anim-controls">
+  <div class="gc-title">Animation</div>
+  <div class="play-row">
+    <button id="btn-play" class="on">▶ Play</button>
+    <button id="btn-pause">⏸ Pause</button>
+    <button id="btn-reset">↺ Reset</button>
+  </div>
+
+  <div class="ac-row">
+    <label>Speed</label>
+    <input type="range" id="anim-speed" min="0.01" max="5" step="0.01" value="1.0">
+    <span class="val" id="val-speed">1.0</span>
+  </div>
+
+  <div class="divider"></div>
+  <div class="axis-head">── X Axis Wave ──</div>
+
+  <div class="ac-row">
+    <label>Preset</label>
+    <select id="anim-x-fn">
+      <option value="sin" selected>Sin</option>
+      <option value="cos">Cos</option>
+      <option value="tri">Triangle</option>
+      <option value="sqr">Square</option>
+      <option value="saw">Sawtooth</option>
+      <option value="circle">Circle</option>
+      <option value="none">None</option>
+    </select>
+  </div>
+  <div class="expr-row">
+    <label>Formula &nbsp;<span style="color:rgba(100,220,255,0.3);font-size:8px">— edit freely</span></label>
+    <input type="text" id="expr-x" value="sin(t)" spellcheck="false">
+    <div class="expr-hint">t · col · row · normX · normZ · clock &nbsp;|&nbsp; sin cos tan sqrt pow abs PI</div>
+  </div>
+  <div class="ac-row">
+    <label>Amplitude</label>
+    <input type="range" id="anim-x-amp" min="0" max="5000" step="10" value="1000">
+    <span class="val" id="val-x-amp">1000</span>
+  </div>
+  <div class="ac-row">
+    <label>Frequency</label>
+    <input type="range" id="anim-x-freq" min="0.1" max="10" step="0.1" value="1.0">
+    <span class="val" id="val-x-freq">1.0</span>
+  </div>
+  <div class="ac-row">
+    <label>Phase</label>
+    <input type="range" id="anim-x-phase" min="0" max="6.28" step="0.01" value="0">
+    <span class="val" id="val-x-phase">0.00</span>
+  </div>
+  <div class="ac-row">
+    <label>Influence</label>
+    <select id="anim-x-inf">
+      <option value="uniform">Uniform</option>
+      <option value="per-col" selected>Per Column</option>
+      <option value="per-row">Per Row</option>
+    </select>
+  </div>
+
+  <div class="divider"></div>
+  <div class="axis-head">── Z Axis Wave ──</div>
+
+  <div class="ac-row">
+    <label>Preset</label>
+    <select id="anim-z-fn">
+      <option value="sin">Sin</option>
+      <option value="cos" selected>Cos</option>
+      <option value="tri">Triangle</option>
+      <option value="sqr">Square</option>
+      <option value="saw">Sawtooth</option>
+      <option value="circle">Circle</option>
+      <option value="none">None</option>
+    </select>
+  </div>
+  <div class="expr-row">
+    <label>Formula &nbsp;<span style="color:rgba(100,220,255,0.3);font-size:8px">— edit freely</span></label>
+    <input type="text" id="expr-z" value="cos(t)" spellcheck="false">
+    <div class="expr-hint">t · col · row · normX · normZ · clock &nbsp;|&nbsp; sin cos tan sqrt pow abs PI</div>
+  </div>
+  <div class="ac-row">
+    <label>Amplitude</label>
+    <input type="range" id="anim-z-amp" min="0" max="5000" step="10" value="1000">
+    <span class="val" id="val-z-amp">1000</span>
+  </div>
+  <div class="ac-row">
+    <label>Frequency</label>
+    <input type="range" id="anim-z-freq" min="0.1" max="10" step="0.1" value="1.0">
+    <span class="val" id="val-z-freq">1.0</span>
+  </div>
+  <div class="ac-row">
+    <label>Phase</label>
+    <input type="range" id="anim-z-phase" min="0" max="6.28" step="0.01" value="0">
+    <span class="val" id="val-z-phase">0.00</span>
+  </div>
+  <div class="ac-row">
+    <label>Influence</label>
+    <select id="anim-z-inf">
+      <option value="uniform">Uniform</option>
+      <option value="per-col">Per Column</option>
+      <option value="per-row" selected>Per Row</option>
+    </select>
+  </div>
+
+  <div class="divider"></div>
+  <div class="axis-head">── Superposition ──</div>
+  <div class="ac-row">
+    <label>Combine</label>
+    <select id="anim-combine">
+      <option value="add">Add</option>
+      <option value="multiply">Multiply</option>
+      <option value="max">Max</option>
+      <option value="min">Min</option>
+    </select>
+  </div>
+
+</div>
+
+<div id="cp-panel">
+  <div class="panel-title" id="cp-panel-title">Control Point —</div>
+  <div class="row"><label>X</label><input type="number" id="cp-x" step="10"></div>
+  <div class="row"><label>Y</label><input type="number" id="cp-y" step="10"></div>
+  <div class="row"><label>Z</label><input type="number" id="cp-z" step="10"></div>
+  <div class="divider"></div>
+  <div class="row"><label>W</label><input type="range" id="weight-slider" min="0.1" max="10" step="0.1" value="1.0"></div>
+  <div class="weight-row"><span class="lbl">weight</span><span id="weight-val">1.0</span></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE        from 'three';
+import { NURBSSurface }  from 'three/addons/curves/NURBSSurface.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ─── RENDERER ────────────────────────────────────────────────────────────────
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio( Math.min( window.devicePixelRatio, 2 ) );
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
+
+// ─── SCENE / CAMERA ──────────────────────────────────────────────────────────
+
+const camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 100000 );
+camera.position.set( 0, 16000, 28000 );
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color( 0x0b0f1a );
+scene.fog = new THREE.Fog( 0x0b0f1a, 30000, 60000 );
+
+const ambientLight = new THREE.AmbientLight( 0x334466, 2.0 );
+scene.add( ambientLight );
+const dirLight = new THREE.DirectionalLight( 0xffffff, 1.4 );
+dirLight.position.set( 1, 2, 1 );
+scene.add( dirLight );
+const fillA = new THREE.PointLight( 0x4488ff, 2.0, 20000 );
+fillA.position.set( -5000, 5000, 5000 );
+scene.add( fillA );
+const fillB = new THREE.PointLight( 0xff4488, 1.5, 15000 );
+fillB.position.set( 5000, -3000, 4000 );
+scene.add( fillB );
+
+// ─── ORBIT ───────────────────────────────────────────────────────────────────
+
+const orbit = new OrbitControls( camera, renderer.domElement );
+orbit.enableDamping  = true;
+orbit.dampingFactor  = 0.08;
+orbit.screenSpacePanning = true;
+orbit.target.set( 0, 0, 0 );
+orbit.update();
+
+// ─── GRID STATE ──────────────────────────────────────────────────────────────
+
+let N    = 12;     // control points per side
+let SIZE = 20000;  // world units
+let RES  = 200;    // mesh subdivisions per side
+
+let cpData = [];   // [row][col] = {x,y,z,w}
+
+function makeFlat( n, size ) {
+  const step = size / ( n - 1 );
+  const half = size / 2;
+  const data = [];
+  for ( let r = 0; r < n; r++ ) {
+    const row = [];
+    for ( let c = 0; c < n; c++ ) {
+      row.push({ x: -half + c * step, y: 0, z: -half + r * step, w: 1 });
+    }
+    data.push( row );
+  }
+  return data;
+}
+
+function buildKnots( n, degree ) {
+  // Clamped uniform knot vector: (degree+1) zeros, interior, (degree+1) ones
+  const interior = n - degree - 1;
+  const knots = [];
+  for ( let i = 0; i <= degree; i++ ) knots.push( 0 );
+  for ( let i = 1; i <= interior; i++ ) knots.push( i / ( interior + 1 ) );
+  for ( let i = 0; i <= degree; i++ ) knots.push( 1 );
+  return knots;
+}
+
+cpData = makeFlat( N, SIZE );
+
+// baseY[row][col] = sculpted Y; animation is superimposed on top each frame
+let baseY = cpData.map( row => row.map( () => 0 ) );
+
+const map = new THREE.TextureLoader().load( 'https://threejs.org/examples/textures/uv_grid_opengl.jpg' );
+map.wrapS = map.wrapT = THREE.RepeatWrapping;
+map.anisotropy = 16;
+
+const surfaceMat = new THREE.MeshLambertMaterial({ map, side: THREE.DoubleSide });
+const wireMat    = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.07, transparent: true });
+
+let surfaceMesh = null;
+let wireOverlay = null;
+
+function buildSurface() {
+  const degree = 3;
+  const knots  = buildKnots( N, degree );
+  const hom    = cpData.map( row =>
+    row.map( p => new THREE.Vector4( p.x * p.w, p.y * p.w, p.z * p.w, p.w ) )
+  );
+  const nurbs = new NURBSSurface( degree, degree, knots, knots, hom );
+  const geo   = new THREE.ParametricBufferGeometry(
+    ( u, v, target ) => nurbs.getPoint( u, v, target ), RES, RES
+  );
+  geo.computeVertexNormals();
+
+  if ( surfaceMesh ) {
+    surfaceMesh.geometry.dispose();
+    surfaceMesh.geometry = geo;
+    wireOverlay.geometry.dispose();
+    wireOverlay.geometry = new THREE.WireframeGeometry( geo );
+  } else {
+    surfaceMesh = new THREE.Mesh( geo, surfaceMat );
+    scene.add( surfaceMesh );
+    wireOverlay = new THREE.LineSegments( new THREE.WireframeGeometry( geo ), wireMat );
+    scene.add( wireOverlay );
+  }
+}
+
+// Sphere materials
+const geoNormal   = new THREE.SphereGeometry( 1, 12, 12 ); // scaled per SIZE below
+const matNormal   = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xff6600, emissiveIntensity: 0.35, roughness: 0.3, metalness: 0.7 });
+const matHover    = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.6,  roughness: 0.2, metalness: 0.8 });
+const matSelected = new THREE.MeshStandardMaterial({ color: 0x44ccff, emissive: 0x44ccff, emissiveIntensity: 0.7,  roughness: 0.2, metalness: 0.8 });
+
+let cpSpheres    = [];
+const latticeGrp = new THREE.Group();
+scene.add( latticeGrp );
+const latticeMat = new THREE.LineBasicMaterial({ color: 0xffaa00, opacity: 0.2, transparent: true });
+
+function sphereRadius() { return SIZE * 0.022; }
+
+function buildSpheres() {
+  // Remove old spheres
+  cpSpheres.forEach( s => scene.remove( s ) );
+  cpSpheres = [];
+  const r = sphereRadius();
+  const geo = new THREE.SphereGeometry( r, 12, 12 );
+
+  for ( let row = 0; row < N; row++ ) {
+    for ( let col = 0; col < N; col++ ) {
+      const m = new THREE.Mesh( geo, matNormal.clone() );
+      m.userData.cpRow = row;
+      m.userData.cpCol = col;
+      scene.add( m );
+      cpSpheres.push( m );
+    }
+  }
+}
+
+function syncSpheres() {
+  let idx = 0;
+  for ( let row = 0; row < N; row++ ) {
+    for ( let col = 0; col < N; col++ ) {
+      const p = cpData[row][col];
+      cpSpheres[idx++].position.set( p.x, p.y, p.z );
+    }
+  }
+
+  // Rebuild lattice lines
+  while ( latticeGrp.children.length ) latticeGrp.remove( latticeGrp.children[0] );
+  const addLine = pts => latticeGrp.add(
+    new THREE.Line( new THREE.BufferGeometry().setFromPoints( pts ), latticeMat )
+  );
+  for ( let row = 0; row < N; row++ ) {
+    addLine( cpData[row].map( p => new THREE.Vector3( p.x, p.y, p.z ) ) );
+  }
+  for ( let col = 0; col < N; col++ ) {
+    addLine( cpData.map( row => new THREE.Vector3( row[col].x, row[col].y, row[col].z ) ) );
+  }
+  syncLabels();
+}
+
+function fullRebuild() {
+  buildSurface();
+  buildSpheres();
+  syncSpheres();
+  document.getElementById('grid-label').textContent = `${N}×${N} control points`;
+  rebuildLabels();
+}
+
+// ─── VISIBILITY STATE ────────────────────────────────────────────────────────
+
+const vis = { spheres: true, lines: true, texture: true, wire: true, labels: false };
+
+function applyVis() {
+  cpSpheres.forEach( s => { s.visible = vis.spheres; } );
+  latticeGrp.visible     = vis.lines;
+  surfaceMat.map         = vis.texture ? map : null;
+  surfaceMat.color.set( vis.texture ? 0xffffff : 0x3a7abd );
+  surfaceMat.needsUpdate = true;
+  wireOverlay.visible    = vis.wire;
+  labelGroup.visible     = vis.labels;
+}
+
+// ─── CP LABELS (canvas sprites, hidden by default) ───────────────────────────
+
+const labelGroup = new THREE.Group();
+scene.add( labelGroup );
+
+function makeLabelSprite( text ) {
+  const canvas  = document.createElement( 'canvas' );
+  canvas.width  = 256;
+  canvas.height = 96;
+  const ctx = canvas.getContext( '2d' );
+  ctx.clearRect( 0, 0, 256, 96 );
+  ctx.fillStyle = 'rgba(8,12,22,0.82)';
+  ctx.beginPath(); ctx.roundRect( 4, 4, 248, 88, 10 ); ctx.fill();
+  ctx.strokeStyle = 'rgba(100,220,255,0.5)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect( 4, 4, 248, 88, 10 ); ctx.stroke();
+  ctx.fillStyle = '#7DF9FF';
+  ctx.font = 'bold 28px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText( text, 128, 48 );
+  const tex = new THREE.CanvasTexture( canvas );
+  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  const sprite = new THREE.Sprite( mat );
+  sprite.scale.set( SIZE * 0.12, SIZE * 0.045, 1 );
+  return sprite;
+}
+
+let labelSprites = [];
+
+function rebuildLabels() {
+  labelSprites.forEach( s => { s.material.map.dispose(); s.material.dispose(); labelGroup.remove( s ); } );
+  labelSprites = [];
+  const offset = SIZE * 0.06;
+  for ( let r = 0; r < N; r++ ) {
+    for ( let c = 0; c < N; c++ ) {
+      const p      = cpData[r][c];
+      const sprite = makeLabelSprite( `[${r},${c}]` );
+      sprite.position.set( p.x, p.y + offset, p.z );
+      labelGroup.add( sprite );
+      labelSprites.push( sprite );
+    }
+  }
+  labelGroup.visible = vis.labels;
+}
+
+function syncLabels() {
+  if ( !vis.labels ) return;
+  const offset = SIZE * 0.06;
+  let idx = 0;
+  for ( let r = 0; r < N; r++ ) {
+    for ( let c = 0; c < N; c++ ) {
+      const p = cpData[r][c];
+      labelSprites[idx++].position.set( p.x, p.y + offset, p.z );
+    }
+  }
+}
+
+// ─── INITIAL BUILD ───────────────────────────────────────────────────────────
+
+fullRebuild();
+
+// ─── PANEL ───────────────────────────────────────────────────────────────────
+
+const cpPanel      = document.getElementById( 'cp-panel' );
+const cpPanelTitle = document.getElementById( 'cp-panel-title' );
+const inputX       = document.getElementById( 'cp-x' );
+const inputY       = document.getElementById( 'cp-y' );
+const inputZ       = document.getElementById( 'cp-z' );
+const weightSlider = document.getElementById( 'weight-slider' );
+const weightVal    = document.getElementById( 'weight-val' );
+
+cpPanel.addEventListener( 'pointerdown', e => e.stopPropagation() );
+cpPanel.addEventListener( 'mousedown',   e => e.stopPropagation() );
+
+function showPanel( row, col ) {
+  const p = cpData[row][col];
+  cpPanelTitle.textContent = `Control Point [row ${row}, col ${col}]`;
+  inputX.value = p.x.toFixed(1);
+  inputY.value = p.y.toFixed(1);
+  inputZ.value = p.z.toFixed(1);
+  weightSlider.value    = p.w;
+  weightVal.textContent = p.w.toFixed(1);
+  cpPanel.style.display = 'block';
+}
+
+function hidePanel() { cpPanel.style.display = 'none'; }
+
+function applyXYZ() {
+  if ( !selectedSphere ) return;
+  const { cpRow: r, cpCol: c } = selectedSphere.userData;
+  cpData[r][c].x = parseFloat( inputX.value ) || 0;
+  cpData[r][c].y = parseFloat( inputY.value ) || 0;
+  cpData[r][c].z = parseFloat( inputZ.value ) || 0;
+  baseY[r][c] = cpData[r][c].y; // record sculpted Y
+  buildSurface();
+  syncSpheres();
+}
+
+[ inputX, inputY, inputZ ].forEach( inp => {
+  inp.addEventListener( 'input',   applyXYZ );
+  inp.addEventListener( 'keydown', e => { if ( e.key === 'Enter' ) inp.blur(); } );
+} );
+
+weightSlider.addEventListener( 'input', () => {
+  if ( !selectedSphere ) return;
+  const { cpRow: r, cpCol: c } = selectedSphere.userData;
+  cpData[r][c].w = parseFloat( weightSlider.value );
+  weightVal.textContent = cpData[r][c].w.toFixed(1);
+  buildSurface();
+} );
+
+// ─── GRID CONFIG CONTROLS ────────────────────────────────────────────────────
+
+const selN    = document.getElementById( 'sel-n' );
+const selSize = document.getElementById( 'sel-size' );
+const selRes  = document.getElementById( 'sel-res' );
+
+document.getElementById( 'btn-apply' ).addEventListener( 'click', () => {
+  const newN    = parseInt( selN.value );
+  const newSize = parseInt( selSize.value );
+  RES = parseInt( selRes.value );
+  N    = newN;
+  SIZE = newSize;
+  cpData = makeFlat( N, SIZE );
+  baseY  = cpData.map( row => row.map( () => 0 ) );
+  animClock = 0;
+  deselect();
+  fullRebuild();
+  camera.position.set( 0, SIZE * 0.8, SIZE * 1.4 );
+  orbit.target.set( 0, 0, 0 );
+  orbit.update();
+} );
+
+document.getElementById( 'btn-flatten' ).addEventListener( 'click', () => {
+  for ( let r = 0; r < N; r++ ) for ( let c = 0; c < N; c++ ) {
+    cpData[r][c].y = 0; cpData[r][c].w = 1; baseY[r][c] = 0;
+  }
+  buildSurface();
+  syncSpheres();
+  if ( selectedSphere ) showPanel( selectedSphere.userData.cpRow, selectedSphere.userData.cpCol );
+} );
+
+// Prevent grid controls bubbling to canvas
+document.getElementById('grid-controls').addEventListener( 'pointerdown', e => e.stopPropagation() );
+document.getElementById('grid-controls').addEventListener( 'mousedown',   e => e.stopPropagation() );
+
+// Wire up visibility toggle buttons
+function makeToggle( id, key ) {
+  const btn = document.getElementById( id );
+  btn.addEventListener( 'click', () => {
+    vis[key] = !vis[key];
+    btn.classList.toggle( 'on', vis[key] );
+    applyVis();
+  } );
+}
+makeToggle( 'tog-spheres', 'spheres' );
+makeToggle( 'tog-lines',   'lines'   );
+makeToggle( 'tog-texture', 'texture' );
+makeToggle( 'tog-wire',    'wire'    );
+makeToggle( 'tog-labels',  'labels'  );
+
+// ─── COLOR PICKERS ────────────────────────────────────────────────────────────
+
+// Helper: bind a color input to a callback
+function onColor( id, fn ) {
+  document.getElementById( id ).addEventListener( 'input', e => fn( e.target.value ) );
+}
+// Helper: bind a range + update its value display
+function onRange( id, valId, fn ) {
+  const inp = document.getElementById( id );
+  const lbl = document.getElementById( valId );
+  inp.addEventListener( 'input', () => {
+    const v = parseFloat( inp.value );
+    if ( lbl ) lbl.textContent = v.toFixed(1);
+    fn( v );
+  } );
+}
+
+// Surface base color — shown when texture is OFF
+onColor( 'col-surface', hex => {
+  surfaceMat.color.set( hex );
+  surfaceMat.needsUpdate = true;
+  document.getElementById('col-surface-hex').textContent = hex;
+  // Also switch texture off if user picks a color
+  if ( vis.texture ) {
+    vis.texture = false;
+    document.getElementById('tog-texture').classList.remove('on');
+    applyVis();
+  }
+} );
+
+// Wireframe color
+onColor( 'col-wire', hex => { wireMat.color.set( hex ); } );
+
+// Lattice color
+onColor( 'col-lattice', hex => { latticeMat.color.set( hex ); } );
+
+// Sky / background color
+onColor( 'col-sky', hex => {
+  scene.background.set( hex );
+  scene.fog.color.set( hex );
+} );
+
+// ─── LIGHTING CONTROLS ───────────────────────────────────────────────────────
+
+onRange( 'lit-ambient', 'val-ambient', v => { ambientLight.intensity = v; } );
+onColor( 'col-ambient', hex => { ambientLight.color.set( hex ); } );
+
+onRange( 'lit-dir', 'val-dir', v => { dirLight.intensity = v; } );
+onColor( 'col-dir', hex => { dirLight.color.set( hex ); } );
+onRange( 'lit-dir-x', 'val-dir-x', v => { dirLight.position.x = v; } );
+onRange( 'lit-dir-y', 'val-dir-y', v => { dirLight.position.y = v; } );
+onRange( 'lit-dir-z', 'val-dir-z', v => { dirLight.position.z = v; } );
+
+onRange( 'lit-filla', 'val-filla', v => { fillA.intensity = v; } );
+onColor( 'col-filla', hex => { fillA.color.set( hex ); } );
+
+onRange( 'lit-fillb', 'val-fillb', v => { fillB.intensity = v; } );
+onColor( 'col-fillb', hex => { fillB.color.set( hex ); } );
+
+// Prevent light panel events from reaching canvas
+document.getElementById('light-controls').addEventListener( 'pointerdown', e => e.stopPropagation() );
+document.getElementById('light-controls').addEventListener( 'mousedown',   e => e.stopPropagation() );
+
+// ─── SELECTION & DRAG ────────────────────────────────────────────────────────
+
+let selectedSphere = null;
+let hoveredSphere  = null;
+const raycaster    = new THREE.Raycaster();
+const mouse        = new THREE.Vector2();
+const dragPlane    = new THREE.Plane();
+const dragOffset   = new THREE.Vector3();
+let   isDragging   = false;
+
+function toNDC( cx, cy ) {
+  mouse.x =  ( cx / window.innerWidth  ) * 2 - 1;
+  mouse.y = -( cy / window.innerHeight ) * 2 + 1;
+}
+
+function hitSphere( cx, cy ) {
+  toNDC( cx, cy );
+  raycaster.setFromCamera( mouse, camera );
+  const hits = raycaster.intersectObjects( cpSpheres );
+  return hits.length ? hits[0].object : null;
+}
+
+function selectSphere( sphere ) {
+  if ( selectedSphere === sphere ) return;
+  if ( selectedSphere ) {
+    selectedSphere.material = matNormal.clone();
+  }
+  selectedSphere = sphere;
+  sphere.material = matSelected.clone();
+  showPanel( sphere.userData.cpRow, sphere.userData.cpCol );
+}
+
+function deselect() {
+  if ( selectedSphere ) { selectedSphere.material = matNormal.clone(); selectedSphere = null; }
+  hidePanel();
+}
+
+// Capture-phase listeners so we fire before OrbitControls
+renderer.domElement.addEventListener( 'pointermove', e => {
+  const sphere = hitSphere( e.clientX, e.clientY );
+
+  // Hover
+  if ( hoveredSphere && hoveredSphere !== selectedSphere ) hoveredSphere.material = matNormal.clone();
+  hoveredSphere = sphere;
+  if ( sphere && sphere !== selectedSphere ) {
+    sphere.material = matHover.clone();
+    renderer.domElement.style.cursor = 'pointer';
+  } else if ( !sphere && !isDragging ) {
+    renderer.domElement.style.cursor = 'default';
+  }
+
+  // Drag
+  if ( isDragging && selectedSphere ) {
+    e.stopPropagation();
+    toNDC( e.clientX, e.clientY );
+    raycaster.setFromCamera( mouse, camera );
+    const hit = new THREE.Vector3();
+    if ( raycaster.ray.intersectPlane( dragPlane, hit ) ) {
+      const newPos = hit.sub( dragOffset );
+      const { cpRow: r, cpCol: c } = selectedSphere.userData;
+      cpData[r][c].x = newPos.x;
+      cpData[r][c].y = newPos.y;
+      cpData[r][c].z = newPos.z;
+      baseY[r][c]    = newPos.y; // record sculpted Y
+      inputX.value = newPos.x.toFixed(1);
+      inputY.value = newPos.y.toFixed(1);
+      inputZ.value = newPos.z.toFixed(1);
+      buildSurface();
+      syncSpheres();
+    }
+  }
+}, true );
+
+renderer.domElement.addEventListener( 'pointerdown', e => {
+  if ( e.button !== 0 ) return;
+  const sphere = hitSphere( e.clientX, e.clientY );
+  if ( sphere ) {
+    e.stopPropagation();
+    selectSphere( sphere );
+    isDragging    = true;
+    orbit.enabled = false;
+    renderer.domElement.style.cursor = 'grabbing';
+
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection( camDir );
+    dragPlane.setFromNormalAndCoplanarPoint( camDir, sphere.position );
+
+    toNDC( e.clientX, e.clientY );
+    raycaster.setFromCamera( mouse, camera );
+    const hit = new THREE.Vector3();
+    raycaster.ray.intersectPlane( dragPlane, hit );
+    dragOffset.copy( hit ).sub( sphere.position );
+  } else {
+    deselect();
+  }
+}, true );
+
+window.addEventListener( 'pointerup', e => {
+  if ( isDragging ) {
+    isDragging    = false;
+    orbit.enabled = true;
+    renderer.domElement.style.cursor = hoveredSphere ? 'pointer' : 'default';
+  }
+}, true );
+
+// ─── ANIMATION SYSTEM ────────────────────────────────────────────────────────
+
+// Compiled custom functions — updated when user edits the expression
+let customFnX = null;
+let customFnZ = null;
+
+function compileExpr( expr ) {
+  try {
+    // Expose useful vars: t (time arg), col, row, normX, normZ, clock, and Math shortcuts
+    const fn = new Function( 't', 'col', 'row', 'normX', 'normZ', 'clock',
+      `"use strict"; const {sin,cos,tan,abs,sqrt,pow,PI,sign,floor,ceil,round,min,max,exp,log} = Math;
+       return (${expr});`
+    );
+    // Test it compiles and runs without error
+    fn( 0, 0, 0, 0, 0, 0 );
+    return fn;
+  } catch(e) {
+    return null;
+  }
+}
+
+// Waveform functions (t = phase-adjusted time argument)
+function waveform( fn, t, col, row, nx, nz, clock ) {
+  switch ( fn ) {
+    case 'sin':    return Math.sin( t );
+    case 'cos':    return Math.cos( t );
+    case 'tri':    return ( 2 / Math.PI ) * Math.asin( Math.sin( t ) );
+    case 'sqr':    return Math.sign( Math.sin( t ) );
+    case 'saw':    return ( ( t / Math.PI ) % 2 + 2 ) % 2 - 1;
+    case 'circle': return Math.sqrt( Math.max( 0, 1 - ( ( ( t % ( 2 * Math.PI ) ) / Math.PI ) - 1 ) ** 2 ) ) * Math.sign( Math.sin( t ) );
+    case 'none':   return 0;
+    case 'custom': {
+      const cfn = fn === 'custom' ? ( col === undefined ? customFnX : customFnZ ) : null;
+      // handled per-axis below
+      return 0;
+    }
+    default: return 0;
+  }
+}
+
+function evalWave( axis, t, col, row, nx, nz ) {
+  const cfn = axis === 'x' ? customFnX : customFnZ;
+  if ( !cfn ) return 0;
+  try { return cfn( t, col, row, nx, nz, animClock ); }
+  catch(e) { return 0; }
+}
+
+// Animation state
+const anim = {
+  playing: true,
+  speed:   1.0,
+  x: { fn: 'sin',  amp: 1000, freq: 1.0, phase: 0, influence: 'per-col' },
+  z: { fn: 'cos',  amp: 1000, freq: 1.0, phase: 0, influence: 'per-row' },
+  combine: 'add',
+};
+
+let animClock = 0;
+let lastTimestamp = null;
+
+// Wire animation panel controls
+function acRange( id, valId, obj, key, decimals = 1 ) {
+  const inp = document.getElementById( id );
+  const lbl = document.getElementById( valId );
+  inp.addEventListener( 'input', () => {
+    obj[key] = parseFloat( inp.value );
+    if ( lbl ) lbl.textContent = obj[key].toFixed( decimals );
+  } );
+}
+function acSelect( id, obj, key ) {
+  document.getElementById( id ).addEventListener( 'change', e => { obj[key] = e.target.value; } );
+}
+
+acRange(  'anim-speed',   'val-speed',   anim,   'speed',   2 );
+acRange(  'anim-x-amp',   'val-x-amp',   anim.x, 'amp',     0 );
+acRange(  'anim-x-freq',  'val-x-freq',  anim.x, 'freq',    1 );
+acRange(  'anim-x-phase', 'val-x-phase', anim.x, 'phase',   2 );
+acRange(  'anim-z-amp',   'val-z-amp',   anim.z, 'amp',     0 );
+acRange(  'anim-z-freq',  'val-z-freq',  anim.z, 'freq',    1 );
+acRange(  'anim-z-phase', 'val-z-phase', anim.z, 'phase',   2 );
+acSelect( 'anim-combine', anim, 'combine' );
+acSelect( 'anim-x-inf',   anim.x, 'influence' );
+acSelect( 'anim-z-inf',   anim.z, 'influence' );
+
+// Preset expressions for each named function
+const PRESETS = {
+  sin:    'sin(t)',
+  cos:    'cos(t)',
+  tri:    '(2/PI) * asin(sin(t))',
+  sqr:    'sign(sin(t))',
+  saw:    '((t/PI) % 2 + 2) % 2 - 1',
+  circle: 'sqrt(max(0, 1 - (((t%(2*PI))/PI)-1)**2)) * sign(sin(t))',
+  none:   '0',
+};
+
+// When preset chosen → write its formula into the text box and recompile
+document.getElementById('anim-x-fn').addEventListener( 'change', e => {
+  const expr = document.getElementById('expr-x');
+  expr.value = PRESETS[ e.target.value ] || expr.value;
+  compileAndStore( 'x' );
+} );
+document.getElementById('anim-z-fn').addEventListener( 'change', e => {
+  const expr = document.getElementById('expr-z');
+  expr.value = PRESETS[ e.target.value ] || expr.value;
+  compileAndStore( 'z' );
+} );
+
+// Compile the expression in the text box and store it; mark invalid on error
+function compileAndStore( axis ) {
+  const inp = document.getElementById( `expr-${axis}` );
+  const fn  = compileExpr( inp.value );
+  if ( fn ) {
+    inp.classList.remove('error');
+    if ( axis === 'x' ) customFnX = fn;
+    else                customFnZ = fn;
+  } else {
+    inp.classList.add('error');
+  }
+}
+
+document.getElementById('expr-x').addEventListener( 'input', () => compileAndStore('x') );
+document.getElementById('expr-z').addEventListener( 'input', () => compileAndStore('z') );
+
+// Compile initial defaults
+compileAndStore('x');
+compileAndStore('z');
+
+document.getElementById('btn-play').addEventListener('click', () => {
+  anim.playing = true;
+  document.getElementById('btn-play').classList.add('on');
+  document.getElementById('btn-pause').classList.remove('on');
+});
+document.getElementById('btn-pause').addEventListener('click', () => {
+  anim.playing = false;
+  document.getElementById('btn-pause').classList.add('on');
+  document.getElementById('btn-play').classList.remove('on');
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  animClock = 0;
+  lastTimestamp = null;
+  tickAnimation( 0 );
+});
+
+// Prevent anim panel from stealing pointer events from canvas
+document.getElementById('anim-controls').addEventListener( 'pointerdown', e => e.stopPropagation() );
+document.getElementById('anim-controls').addEventListener( 'mousedown',   e => e.stopPropagation() );
+
+// Normalised position of each control point along its axis [0..1]
+function normX( col ) { return N > 1 ? col / ( N - 1 ) : 0.5; }
+function normZ( row ) { return N > 1 ? row / ( N - 1 ) : 0.5; }
+
+function tickAnimation( dt ) {
+  if ( anim.playing ) animClock += dt * anim.speed;
+
+  const TAU   = 2 * Math.PI;
+  const xA    = anim.x, zA    = anim.z;
+  let   dirty = false;
+
+  for ( let r = 0; r < N; r++ ) {
+    for ( let c = 0; c < N; c++ ) {
+      // --- X-axis wave ---
+      let xArg;
+      switch ( xA.influence ) {
+        case 'per-col':  xArg = normX(c) * TAU * xA.freq + animClock * TAU * xA.freq + xA.phase; break;
+        case 'per-row':  xArg = normZ(r) * TAU * xA.freq + animClock * TAU * xA.freq + xA.phase; break;
+        default:         xArg = animClock * TAU * xA.freq + xA.phase; break;
+      }
+      const xVal = evalWave( 'x', xArg, c, r, normX(c), normZ(r) ) * xA.amp;
+
+      // --- Z-axis wave ---
+      let zArg;
+      switch ( zA.influence ) {
+        case 'per-col':  zArg = normX(c) * TAU * zA.freq + animClock * TAU * zA.freq + zA.phase; break;
+        case 'per-row':  zArg = normZ(r) * TAU * zA.freq + animClock * TAU * zA.freq + zA.phase; break;
+        default:         zArg = animClock * TAU * zA.freq + zA.phase; break;
+      }
+      const zVal = evalWave( 'z', zArg, c, r, normX(c), normZ(r) ) * zA.amp;
+
+      // --- Superposition ---
+      let combined;
+      switch ( anim.combine ) {
+        case 'multiply': combined = ( xVal / Math.max(1, xA.amp) ) * ( zVal / Math.max(1, zA.amp) ) * Math.max( xA.amp, zA.amp ); break;
+        case 'max':      combined = Math.max( xVal, zVal ); break;
+        case 'min':      combined = Math.min( xVal, zVal ); break;
+        default:         combined = xVal + zVal; break; // add
+      }
+
+      const newY = baseY[r][c] + combined;
+      if ( Math.abs( newY - cpData[r][c].y ) > 0.01 ) {
+        cpData[r][c].y = newY;
+        dirty = true;
+      }
+    }
+  }
+
+  if ( dirty ) {
+    buildSurface();
+    syncSpheres();
+    // Keep CP panel Y in sync if a point is selected
+    if ( selectedSphere ) {
+      const { cpRow: r, cpCol: c } = selectedSphere.userData;
+      inputY.value = cpData[r][c].y.toFixed(1);
+    }
+  }
+}
+
+// ─── RESIZE ──────────────────────────────────────────────────────────────────
+
+window.addEventListener( 'resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+} );
+
+// ─── ANIMATE ─────────────────────────────────────────────────────────────────
+
+function animate( timestamp ) {
+  requestAnimationFrame( animate );
+  const dt = lastTimestamp !== null ? Math.min( ( timestamp - lastTimestamp ) / 1000, 0.05 ) : 0;
+  lastTimestamp = timestamp;
+  tickAnimation( dt );
+  orbit.update();
+  renderer.render( scene, camera );
+}
+requestAnimationFrame( animate );
+</script>
+</body>
+</html>
