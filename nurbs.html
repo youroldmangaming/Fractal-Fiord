@@ -24,6 +24,41 @@
     }
     #hint span { color: rgba(100,220,255,0.5); }
 
+    /* Quadrant navigator */
+    #quad-nav {
+      position: fixed; bottom: 56px; left: 50%; transform: translateX(-50%);
+      background: rgba(8,12,22,0.92);
+      border: 1px solid rgba(100,220,255,0.22);
+      padding: 10px 12px; z-index: 20;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    #quad-nav .qn-title {
+      font-size: 8px; text-transform: uppercase; letter-spacing: 0.14em;
+      color: rgba(100,220,255,0.3); margin-bottom: 4px;
+    }
+    #quad-nav .qn-grid { display: grid; gap: 3px; }
+    #quad-nav .qn-cell {
+      width: 28px; height: 28px;
+      border: 1px solid rgba(100,220,255,0.15);
+      background: rgba(100,220,255,0.03);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: rgba(100,220,255,0.3);
+      font-family: 'Space Mono', monospace;
+      transition: background 0.12s, border-color 0.12s;
+      position: relative;
+    }
+    #quad-nav .qn-cell:hover { background: rgba(100,220,255,0.12); border-color: rgba(100,220,255,0.4); }
+    #quad-nav .qn-cell.exists { background: rgba(100,220,255,0.08); border-color: rgba(100,220,255,0.35); color: rgba(100,220,255,0.6); }
+    #quad-nav .qn-cell.active { background: rgba(100,220,255,0.22); border-color: #7DF9FF; color: #7DF9FF; box-shadow: 0 0 6px rgba(100,220,255,0.3); }
+    #quad-nav .qn-cell.origin { border-style: dashed; }
+    #quad-nav .qn-cell .qn-del {
+      position: absolute; top: 1px; right: 2px;
+      font-size: 7px; color: rgba(255,80,80,0.5); line-height: 1;
+      display: none;
+    }
+    #quad-nav .qn-cell.exists:hover .qn-del { display: block; }
+    #quad-nav .qn-cell .qn-del:hover { color: rgba(255,80,80,1); }
+
     #cp-panel {
       display: none;
       position: fixed; top: 16px; right: 20px;
@@ -87,6 +122,16 @@
       font-size: 9px; padding: 4px 7px; cursor: pointer; outline: none;
     }
     #grid-controls select { width: 70px; }
+    #grid-controls input[type="number"] {
+      background: rgba(100,220,255,0.06);
+      border: 1px solid rgba(100,220,255,0.18);
+      color: #fff; font-family: 'Space Mono', monospace;
+      font-size: 9px; padding: 4px 5px; outline: none;
+      -moz-appearance: textfield;
+    }
+    #grid-controls input[type="number"]::-webkit-outer-spin-button,
+    #grid-controls input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    #grid-controls input[type="number"]:focus { border-color: rgba(100,220,255,0.55); }
     #grid-controls button {
       width: 100%; margin-top: 4px; letter-spacing: 0.1em;
       text-transform: uppercase; transition: background 0.15s;
@@ -177,7 +222,10 @@
     #anim-controls .play-row button.on {
       background: rgba(100,220,255,0.2); border-color: rgba(100,220,255,0.7); color: #7DF9FF;
     }
-    #anim-controls .axis-head {
+    #anim-controls select optgroup {
+      color: rgba(100,220,255,0.4); font-size: 8px; letter-spacing: 0.1em;
+    }
+    #anim-controls select option { color: #fff; font-size: 9px; }
       font-size: 9px; color: rgba(100,220,255,0.6); text-transform: uppercase;
       letter-spacing: 0.15em; margin-bottom: 8px; margin-top: 4px;
     }
@@ -213,39 +261,43 @@
   <span>click sphere</span> select &nbsp;·&nbsp; <span>drag sphere</span> move &nbsp;·&nbsp; edit XYZ &amp; weight →
 </div>
 
+<!-- Quadrant navigator -->
+<div id="quad-nav">
+  <div class="qn-title">Terrain Patches — click to select · + to add · × to remove</div>
+  <div class="qn-grid" id="qn-grid" style="grid-template-columns: repeat(7, 28px)"></div>
+</div>
+
 <!-- Left: grid config -->
 <div id="grid-controls">
   <div class="gc-title">Grid Config</div>
   <div class="gc-row">
     <label>Points/side</label>
-    <select id="sel-n">
-      <option value="5">5</option>
-      <option value="6">6</option>
-      <option value="8">8</option>
-      <option value="10">10</option>
-      <option value="12" selected>12</option>
-    </select>
+    <input type="number" id="sel-n" min="3" max="20" step="1" value="12" style="width:55px">
+    <input type="range"  id="sel-n-sl" min="3" max="20" step="1" value="12" style="flex:1;accent-color:#44ccff">
   </div>
   <div class="gc-row">
     <label>Size</label>
-    <select id="sel-size">
-      <option value="2000">2 000</option>
-      <option value="5000">5 000</option>
-      <option value="10000">10 000</option>
-      <option value="20000" selected>20 000</option>
-    </select>
+    <input type="number" id="sel-size" min="100" max="100000" step="100" value="20000" style="width:70px">
+    <input type="range"  id="sel-size-sl" min="100" max="100000" step="100" value="20000" style="flex:1;accent-color:#44ccff">
   </div>
   <div class="gc-row">
     <label>Resolution</label>
-    <select id="sel-res">
-      <option value="40">40</option>
-      <option value="80">80</option>
-      <option value="120">120</option>
-      <option value="200" selected>200</option>
-    </select>
+    <input type="number" id="sel-res" min="4" max="300" step="1" value="200" style="width:55px">
+    <input type="range"  id="sel-res-sl" min="4" max="300" step="1" value="200" style="flex:1;accent-color:#44ccff">
   </div>
-  <button id="btn-apply">Apply</button>
-  <button id="btn-flatten" style="margin-top:6px">Flatten All</button>
+  <div style="font-size:8px;color:rgba(100,220,255,0.3);margin-bottom:8px;margin-top:-4px">
+    High resolution may be slow · changes apply live
+  </div>
+  <button id="btn-flatten">Flatten Active Patch</button>
+  <div class="divider"></div>
+  <div class="gc-title" style="margin-bottom:8px">Rotate Active Patch</div>
+  <div class="toggle-grid">
+    <button id="btn-rot90">↻ 90°</button>
+    <button id="btn-rot180">↻ 180°</button>
+    <button id="btn-rot270">↺ 270°</button>
+    <button id="btn-flipx">⇔ Flip X</button>
+    <button id="btn-flipz" style="grid-column:1/-1">⇕ Flip Z</button>
+  </div>
   <div class="divider"></div>
   <div class="gc-title" style="margin-bottom:8px">Visibility</div>
   <div class="toggle-grid">
@@ -364,13 +416,42 @@
   <div class="ac-row">
     <label>Preset</label>
     <select id="anim-x-fn">
-      <option value="sin" selected>Sin</option>
-      <option value="cos">Cos</option>
-      <option value="tri">Triangle</option>
-      <option value="sqr">Square</option>
-      <option value="saw">Sawtooth</option>
-      <option value="circle">Circle</option>
-      <option value="none">None</option>
+      <optgroup label="── Basic ──">
+        <option value="sin" selected>Sin</option>
+        <option value="cos">Cos</option>
+        <option value="tri">Triangle</option>
+        <option value="sqr">Square</option>
+        <option value="saw">Sawtooth</option>
+        <option value="rsaw">Reverse Sawtooth</option>
+      </optgroup>
+      <optgroup label="── Shaped ──">
+        <option value="abs">Abs Sin (Bounce)</option>
+        <option value="rectcos">Abs Cos</option>
+        <option value="pulse">Narrow Pulse</option>
+        <option value="trapezoid">Trapezoid</option>
+        <option value="circle">Circle</option>
+        <option value="smooth">Smooth Step</option>
+      </optgroup>
+      <optgroup label="── Modulated ──">
+        <option value="am">AM (Sin×Sin)</option>
+        <option value="fm">FM (Sin of Sin)</option>
+        <option value="beating">Beating Waves</option>
+        <option value="chirp">Chirp (rising freq)</option>
+        <option value="sinc">Sinc</option>
+      </optgroup>
+      <optgroup label="── Terrain ──">
+        <option value="ridge">Ridge</option>
+        <option value="terrace">Terrace Steps</option>
+        <option value="ripple">Radial Ripple</option>
+        <option value="damp">Damped Wave</option>
+        <option value="noise">Pseudo Noise</option>
+      </optgroup>
+      <optgroup label="── Other ──">
+        <option value="exp">Exp Decay</option>
+        <option value="sigmoid">Sigmoid</option>
+        <option value="heartbeat">Heartbeat</option>
+        <option value="none">None (flat)</option>
+      </optgroup>
     </select>
   </div>
   <div class="expr-row">
@@ -408,13 +489,42 @@
   <div class="ac-row">
     <label>Preset</label>
     <select id="anim-z-fn">
-      <option value="sin">Sin</option>
-      <option value="cos" selected>Cos</option>
-      <option value="tri">Triangle</option>
-      <option value="sqr">Square</option>
-      <option value="saw">Sawtooth</option>
-      <option value="circle">Circle</option>
-      <option value="none">None</option>
+      <optgroup label="── Basic ──">
+        <option value="sin">Sin</option>
+        <option value="cos" selected>Cos</option>
+        <option value="tri">Triangle</option>
+        <option value="sqr">Square</option>
+        <option value="saw">Sawtooth</option>
+        <option value="rsaw">Reverse Sawtooth</option>
+      </optgroup>
+      <optgroup label="── Shaped ──">
+        <option value="abs">Abs Sin (Bounce)</option>
+        <option value="rectcos">Abs Cos</option>
+        <option value="pulse">Narrow Pulse</option>
+        <option value="trapezoid">Trapezoid</option>
+        <option value="circle">Circle</option>
+        <option value="smooth">Smooth Step</option>
+      </optgroup>
+      <optgroup label="── Modulated ──">
+        <option value="am">AM (Sin×Sin)</option>
+        <option value="fm">FM (Sin of Sin)</option>
+        <option value="beating">Beating Waves</option>
+        <option value="chirp">Chirp (rising freq)</option>
+        <option value="sinc">Sinc</option>
+      </optgroup>
+      <optgroup label="── Terrain ──">
+        <option value="ridge">Ridge</option>
+        <option value="terrace">Terrace Steps</option>
+        <option value="ripple">Radial Ripple</option>
+        <option value="damp">Damped Wave</option>
+        <option value="noise">Pseudo Noise</option>
+      </optgroup>
+      <optgroup label="── Other ──">
+        <option value="exp">Exp Decay</option>
+        <option value="sigmoid">Sigmoid</option>
+        <option value="heartbeat">Heartbeat</option>
+        <option value="none">None (flat)</option>
+      </optgroup>
     </select>
   </div>
   <div class="expr-row">
@@ -523,28 +633,21 @@ orbit.update();
 
 // ─── GRID STATE ──────────────────────────────────────────────────────────────
 
-let N    = 12;     // control points per side
-let SIZE = 20000;  // world units
-let RES  = 200;    // mesh subdivisions per side
+let N    = 12;
+let SIZE = 20000;
+let RES  = 200;
 
-let cpData = [];   // [row][col] = {x,y,z,w}
-
-function makeFlat( n, size ) {
+function makeFlat( n, size, offX = 0, offZ = 0 ) {
   const step = size / ( n - 1 );
   const half = size / 2;
-  const data = [];
-  for ( let r = 0; r < n; r++ ) {
-    const row = [];
-    for ( let c = 0; c < n; c++ ) {
-      row.push({ x: -half + c * step, y: 0, z: -half + r * step, w: 1 });
-    }
-    data.push( row );
-  }
-  return data;
+  return Array.from( {length: n}, ( _, r ) =>
+    Array.from( {length: n}, ( _, c ) => ({
+      x: -half + c * step + offX, y: 0, z: -half + r * step + offZ, w: 1
+    }))
+  );
 }
 
 function buildKnots( n, degree ) {
-  // Clamped uniform knot vector: (degree+1) zeros, interior, (degree+1) ones
   const interior = n - degree - 1;
   const knots = [];
   for ( let i = 0; i <= degree; i++ ) knots.push( 0 );
@@ -553,25 +656,308 @@ function buildKnots( n, degree ) {
   return knots;
 }
 
-cpData = makeFlat( N, SIZE );
+// ─── SELECTION STATE (hoisted — needed by patch system) ──────────────────────
 
-// baseY[row][col] = sculpted Y; animation is superimposed on top each frame
-let baseY = cpData.map( row => row.map( () => 0 ) );
+let selectedSphere = null;
+let hoveredSphere  = null;
 
+// Panel DOM refs hoisted so deselect/hidePanel work during patch init
+const cpPanel      = document.getElementById( 'cp-panel' );
+const cpPanelTitle = document.getElementById( 'cp-panel-title' );
+
+function hidePanel() { cpPanel.style.display = 'none'; }
+function deselect() {
+  if ( selectedSphere ) { selectedSphere.material = matNormal.clone(); selectedSphere = null; }
+  hidePanel();
+}
+
+// ─── PATCH SYSTEM ────────────────────────────────────────────────────────────
+// Each patch is keyed by "qx,qz" (integer quadrant grid coordinates).
+// Patches are offset by qx*SIZE in X and qz*SIZE in Z.
+
+const patches   = new Map();    // key → patch object
+let activePatchKey = '0,0';
+
+// Shared materials (all patches use the same)
 const map = new THREE.TextureLoader().load( 'https://threejs.org/examples/textures/uv_grid_opengl.jpg' );
 map.wrapS = map.wrapT = THREE.RepeatWrapping;
 map.anisotropy = 16;
 
 const surfaceMat = new THREE.MeshLambertMaterial({ map, side: THREE.DoubleSide });
 const wireMat    = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.07, transparent: true });
+const matNormal  = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xff6600, emissiveIntensity: 0.35, roughness: 0.3, metalness: 0.7 });
+const matHover   = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.6,  roughness: 0.2, metalness: 0.8 });
+const matSelected= new THREE.MeshStandardMaterial({ color: 0x44ccff, emissive: 0x44ccff, emissiveIntensity: 0.7,  roughness: 0.2, metalness: 0.8 });
+const matInactive= new THREE.MeshStandardMaterial({ color: 0x886600, emissive: 0x443300, emissiveIntensity: 0.2,  roughness: 0.5, metalness: 0.4 });
+const latticeMat = new THREE.LineBasicMaterial({ color: 0xffaa00, opacity: 0.2, transparent: true });
 
-let surfaceMesh = null;
-let wireOverlay = null;
+function sphereRadius() { return SIZE * 0.022; }
 
-function buildSurface() {
+function createPatch( qx, qz ) {
+  const offX = qx * SIZE, offZ = qz * SIZE;
+  const p = {
+    qx, qz, key: `${qx},${qz}`,
+    cpData:      makeFlat( N, SIZE, offX, offZ ),
+    baseY:       Array.from( {length: N}, () => new Array(N).fill(0) ),
+    mesh:        null,
+    wire:        null,
+    spheres:     [],
+    lattice:     new THREE.Group(),
+    labels:      new THREE.Group(),
+    labelSprites:[],
+  };
+  scene.add( p.lattice );
+  scene.add( p.labels );
+  p.labels.visible = false;
+  buildPatchSurface( p );
+  buildPatchSpheres( p );
+  syncPatchSpheres( p );
+  rebuildPatchLabels( p );
+  return p;
+}
+
+function destroyPatch( patch ) {
+  if ( patch.mesh )  { patch.mesh.geometry.dispose();  scene.remove( patch.mesh );  }
+  if ( patch.wire )  { patch.wire.geometry.dispose();  scene.remove( patch.wire );  }
+  patch.spheres.forEach( s => { s.geometry.dispose(); scene.remove( s ); } );
+  while ( patch.lattice.children.length ) patch.lattice.remove( patch.lattice.children[0] );
+  scene.remove( patch.lattice );
+  patch.labelSprites.forEach( s => { s.material.map.dispose(); s.material.dispose(); } );
+  scene.remove( patch.labels );
+}
+
+function addPatch( qx, qz ) {
+  const key = `${qx},${qz}`;
+  if ( patches.has( key ) ) return;
+  const p = createPatch( qx, qz );
+  patches.set( key, p );
+  stitchAllEdges();        // snap new patch edges to neighbours
+  setActivePatch( key );
+  renderQuadNav();
+  applyVis();
+}
+
+function removePatch( qx, qz ) {
+  const key = `${qx},${qz}`;
+  if ( !patches.has( key ) ) return;
+  if ( patches.size <= 1 ) return; // keep at least one
+  if ( selectedSphere && selectedSphere.userData.patch?.key === key ) deselect();
+  destroyPatch( patches.get( key ) );
+  patches.delete( key );
+  if ( activePatchKey === key ) {
+    const fallback = patches.keys().next().value;
+    setActivePatch( fallback );
+  }
+  renderQuadNav();
+}
+
+function setActivePatch( key ) {
+  activePatchKey = key;
+  // Dim spheres on all patches, brighten active
+  patches.forEach( ( p, k ) => {
+    const isActive = ( k === key );
+    p.spheres.forEach( s => {
+      if ( s !== selectedSphere ) s.material = ( isActive ? matNormal : matInactive ).clone();
+    } );
+  } );
+  deselect();
+  document.getElementById('grid-label').textContent =
+    `Patch [${patches.get(key)?.qx ?? 0},${patches.get(key)?.qz ?? 0}] · ${N}×${N} pts`;
+  renderQuadNav();
+}
+
+function activePatch() { return patches.get( activePatchKey ); }
+
+// ─── EDGE STITCHING ───────────────────────────────────────────────────────────
+// Adjacent patches share an edge of N control points.
+// We average the Y and W values so the surface is continuous.
+//
+//   Horizontal neighbours (qx differ by 1):
+//     left patch  right column  [r][N-1]  ↔  right patch  left column  [r][0]
+//   Vertical neighbours (qz differ by 1):
+//     bottom patch top row     [N-1][c]  ↔  top patch   bottom row   [0][c]
+//   Corners: up to 4 patches share one point — average all present.
+
+function getPatch( qx, qz ) { return patches.get( `${qx},${qz}` ); }
+
+function setEdge( pA, rA, cA, pB, rB, cB ) {
+  // Copy A→B if A is sculpted, B→A if B is sculpted, average if both are
+  const yA = pA.baseY[rA][cA], yB = pB.baseY[rB][cB];
+  const wA = pA.cpData[rA][cA].w, wB = pB.cpData[rB][cB].w;
+  const bothFlat = ( yA === 0 && yB === 0 );
+  const y = bothFlat ? 0 : ( yA !== 0 && yB !== 0 ) ? (yA + yB) * 0.5 : yA !== 0 ? yA : yB;
+  const w = ( wA + wB ) * 0.5;
+  pA.cpData[rA][cA].y = pB.cpData[rB][cB].y = y;
+  pA.cpData[rA][cA].w = pB.cpData[rB][cB].w = w;
+  pA.baseY[rA][cA]    = pB.baseY[rB][cB]    = y;
+}
+
+function stitchAllEdges() {
+  const dirty = new Set();
+
+  patches.forEach( pA => {
+    const { qx, qz } = pA;
+
+    // Right neighbour
+    const pR = getPatch( qx + 1, qz );
+    if ( pR ) {
+      for ( let r = 0; r < N; r++ ) setEdge( pA, r, N-1, pR, r, 0 );
+      dirty.add( pA ); dirty.add( pR );
+    }
+
+    // Top neighbour (qz+1)
+    const pT = getPatch( qx, qz + 1 );
+    if ( pT ) {
+      for ( let c = 0; c < N; c++ ) setEdge( pA, N-1, c, pT, 0, c );
+      dirty.add( pA ); dirty.add( pT );
+    }
+  } );
+
+  // 4-way corners: average all four touching patches
+  patches.forEach( pBL => {
+    const { qx, qz } = pBL;
+    const pBR = getPatch( qx+1, qz   );
+    const pTL = getPatch( qx,   qz+1 );
+    const pTR = getPatch( qx+1, qz+1 );
+    if ( !pBR || !pTL || !pTR ) return;
+
+    const corners = [
+      [ pBL, N-1, N-1 ], [ pBR, N-1, 0 ], [ pTL, 0, N-1 ], [ pTR, 0, 0 ]
+    ];
+    const yVals = corners.map( ([p,r,c]) => p.baseY[r][c] );
+    const wVals = corners.map( ([p,r,c]) => p.cpData[r][c].w );
+    const nz    = yVals.filter( v => v !== 0 );
+    const avgY  = nz.length ? nz.reduce((a,b)=>a+b,0)/nz.length : 0;
+    const avgW  = wVals.reduce((a,b)=>a+b,0) / 4;
+
+    corners.forEach( ([p,r,c]) => {
+      p.cpData[r][c].y = avgY;
+      p.cpData[r][c].w = avgW;
+      p.baseY[r][c]    = avgY;
+      dirty.add( p );
+    } );
+  } );
+
+  dirty.forEach( patch => {
+    buildPatchSurface( patch );
+    syncPatchSpheres( patch );
+  } );
+
+  // After C0 edge matching, blend inner control rows/cols for C1 tangent continuity.
+  // This eliminates the visible crease at patch boundaries.
+  blendSeamTangents();
+}
+
+// ─── C1 TANGENT BLENDING ──────────────────────────────────────────────────────
+// For a NURBS patch, the surface tangent at the edge is proportional to
+// (edge_Y − inner_Y).  To get a smooth join we average the slopes from both
+// sides and push them back so both patches agree on the derivative.
+//
+//   avgDeriv = ( (edgeY − innerA_Y) + (innerB_Y − edgeY) ) / 2
+//   new innerA_Y = edgeY − avgDeriv
+//   new innerB_Y = edgeY + avgDeriv
+//
+// blendSeamTangents()     → updates cpData AND baseY (used after user edits)
+// blendSeamTangentsAnim() → updates cpData.y ONLY  (used every anim frame)
+
+function blendSeamTangents() {
+  const dirty = new Set();
+  patches.forEach( pA => {
+    const { qx, qz } = pA;
+
+    // ── right boundary ──
+    const pR = getPatch( qx+1, qz );
+    if ( pR ) {
+      for ( let r = 0; r < N; r++ ) {
+        const ey = pA.cpData[r][N-1].y;
+        const d  = ( ( ey - pA.cpData[r][N-2].y ) + ( pR.cpData[r][1].y - ey ) ) * 0.5;
+        pA.cpData[r][N-2].y = pA.baseY[r][N-2] = ey - d;
+        pR.cpData[r][1  ].y = pR.baseY[r][1  ] = ey + d;
+      }
+      dirty.add(pA); dirty.add(pR);
+    }
+
+    // ── top boundary ──
+    const pT = getPatch( qx, qz+1 );
+    if ( pT ) {
+      for ( let c = 0; c < N; c++ ) {
+        const ey = pA.cpData[N-1][c].y;
+        const d  = ( ( ey - pA.cpData[N-2][c].y ) + ( pT.cpData[1][c].y - ey ) ) * 0.5;
+        pA.cpData[N-2][c].y = pA.baseY[N-2][c] = ey - d;
+        pT.cpData[1  ][c].y = pT.baseY[1  ][c] = ey + d;
+      }
+      dirty.add(pA); dirty.add(pT);
+    }
+  } );
+  dirty.forEach( p => { buildPatchSurface(p); syncPatchSpheres(p); } );
+}
+
+// Lightweight version — only touches cpData.y, not baseY.
+// Safe to call every animation frame without corrupting sculpted state.
+function blendSeamTangentsAnim() {
+  patches.forEach( pA => {
+    const { qx, qz } = pA;
+
+    const pR = getPatch( qx+1, qz );
+    if ( pR ) {
+      for ( let r = 0; r < N; r++ ) {
+        const ey = pA.cpData[r][N-1].y;
+        const d  = ( ( ey - pA.cpData[r][N-2].y ) + ( pR.cpData[r][1].y - ey ) ) * 0.5;
+        pA.cpData[r][N-2].y = ey - d;
+        pR.cpData[r][1  ].y = ey + d;
+      }
+    }
+
+    const pT = getPatch( qx, qz+1 );
+    if ( pT ) {
+      for ( let c = 0; c < N; c++ ) {
+        const ey = pA.cpData[N-1][c].y;
+        const d  = ( ( ey - pA.cpData[N-2][c].y ) + ( pT.cpData[1][c].y - ey ) ) * 0.5;
+        pA.cpData[N-2][c].y = ey - d;
+        pT.cpData[1  ][c].y = ey + d;
+      }
+    }
+  } );
+}
+
+// Propagate a single edge/corner point to all neighbours instantly (used during drag).
+function propagateEdgePoint( patch, r, c, y, w ) {
+  const { qx, qz } = patch;
+  const affected = [ patch ];
+
+  // Determine which edges this point sits on
+  const onLeft   = c === 0;
+  const onRight  = c === N-1;
+  const onBottom = r === 0;
+  const onTop    = r === N-1;
+
+  function set( p, pr, pc ) {
+    p.cpData[pr][pc].y = y;
+    p.cpData[pr][pc].w = w;
+    p.baseY[pr][pc]    = y;
+    affected.push( p );
+  }
+
+  if ( onLeft   ) { const n = getPatch( qx-1, qz   ); if (n) set( n, r,   N-1 ); }
+  if ( onRight  ) { const n = getPatch( qx+1, qz   ); if (n) set( n, r,   0   ); }
+  if ( onBottom ) { const n = getPatch( qx,   qz-1 ); if (n) set( n, N-1, c   ); }
+  if ( onTop    ) { const n = getPatch( qx,   qz+1 ); if (n) set( n, 0,   c   ); }
+
+  // Diagonal corners
+  if ( onLeft  && onBottom ) { const n = getPatch( qx-1, qz-1 ); if (n) set( n, N-1, N-1 ); }
+  if ( onRight && onBottom ) { const n = getPatch( qx+1, qz-1 ); if (n) set( n, N-1, 0   ); }
+  if ( onLeft  && onTop    ) { const n = getPatch( qx-1, qz+1 ); if (n) set( n, 0,   N-1 ); }
+  if ( onRight && onTop    ) { const n = getPatch( qx+1, qz+1 ); if (n) set( n, 0,   0   ); }
+
+  return [ ...new Set( affected ) ];
+}
+
+// ─── PER-PATCH BUILD FUNCTIONS ────────────────────────────────────────────────
+
+function buildNURBSGeo( patch ) {
   const degree = 3;
   const knots  = buildKnots( N, degree );
-  const hom    = cpData.map( row =>
+  const hom    = patch.cpData.map( row =>
     row.map( p => new THREE.Vector4( p.x * p.w, p.y * p.w, p.z * p.w, p.w ) )
   );
   const nurbs = new NURBSSurface( degree, degree, knots, knots, hom );
@@ -579,116 +965,92 @@ function buildSurface() {
     ( u, v, target ) => nurbs.getPoint( u, v, target ), RES, RES
   );
   geo.computeVertexNormals();
+  return geo;
+}
 
-  if ( surfaceMesh ) {
-    surfaceMesh.geometry.dispose();
-    surfaceMesh.geometry = geo;
-    wireOverlay.geometry.dispose();
-    wireOverlay.geometry = new THREE.WireframeGeometry( geo );
+// Full rebuild: surface + wireframe. Use for user interactions.
+function buildPatchSurface( patch ) {
+  const geo = buildNURBSGeo( patch );
+  if ( patch.mesh ) {
+    patch.mesh.geometry.dispose();  patch.mesh.geometry = geo;
+    patch.wire.geometry.dispose();  patch.wire.geometry = new THREE.WireframeGeometry( geo );
   } else {
-    surfaceMesh = new THREE.Mesh( geo, surfaceMat );
-    scene.add( surfaceMesh );
-    wireOverlay = new THREE.LineSegments( new THREE.WireframeGeometry( geo ), wireMat );
-    scene.add( wireOverlay );
+    patch.mesh = new THREE.Mesh( geo, surfaceMat );
+    scene.add( patch.mesh );
+    patch.wire = new THREE.LineSegments( new THREE.WireframeGeometry( geo ), wireMat );
+    scene.add( patch.wire );
   }
 }
 
-// Sphere materials
-const geoNormal   = new THREE.SphereGeometry( 1, 12, 12 ); // scaled per SIZE below
-const matNormal   = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xff6600, emissiveIntensity: 0.35, roughness: 0.3, metalness: 0.7 });
-const matHover    = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.6,  roughness: 0.2, metalness: 0.8 });
-const matSelected = new THREE.MeshStandardMaterial({ color: 0x44ccff, emissive: 0x44ccff, emissiveIntensity: 0.7,  roughness: 0.2, metalness: 0.8 });
-
-let cpSpheres    = [];
-const latticeGrp = new THREE.Group();
-scene.add( latticeGrp );
-const latticeMat = new THREE.LineBasicMaterial({ color: 0xffaa00, opacity: 0.2, transparent: true });
-
-function sphereRadius() { return SIZE * 0.022; }
-
-function buildSpheres() {
-  // Remove old spheres
-  cpSpheres.forEach( s => scene.remove( s ) );
-  cpSpheres = [];
-  const r = sphereRadius();
-  const geo = new THREE.SphereGeometry( r, 12, 12 );
-
-  for ( let row = 0; row < N; row++ ) {
-    for ( let col = 0; col < N; col++ ) {
-      const m = new THREE.Mesh( geo, matNormal.clone() );
-      m.userData.cpRow = row;
-      m.userData.cpCol = col;
-      scene.add( m );
-      cpSpheres.push( m );
-    }
-  }
+// Lightweight: surface geometry only, no wireframe. Use every animation frame.
+function updatePatchSurfaceAnim( patch ) {
+  const geo = buildNURBSGeo( patch );
+  patch.mesh.geometry.dispose();
+  patch.mesh.geometry = geo;
 }
 
-function syncSpheres() {
+// Full sphere + lattice sync. Use for user interactions.
+function syncPatchSpheres( patch ) {
   let idx = 0;
   for ( let row = 0; row < N; row++ ) {
     for ( let col = 0; col < N; col++ ) {
-      const p = cpData[row][col];
-      cpSpheres[idx++].position.set( p.x, p.y, p.z );
+      const p = patch.cpData[row][col];
+      patch.spheres[idx++].position.set( p.x, p.y, p.z );
     }
   }
-
   // Rebuild lattice lines
-  while ( latticeGrp.children.length ) latticeGrp.remove( latticeGrp.children[0] );
-  const addLine = pts => latticeGrp.add(
+  while ( patch.lattice.children.length ) patch.lattice.remove( patch.lattice.children[0] );
+  const addLine = pts => patch.lattice.add(
     new THREE.Line( new THREE.BufferGeometry().setFromPoints( pts ), latticeMat )
   );
+  for ( let row = 0; row < N; row++ )
+    addLine( patch.cpData[row].map( p => new THREE.Vector3( p.x, p.y, p.z ) ) );
+  for ( let col = 0; col < N; col++ )
+    addLine( patch.cpData.map( row => new THREE.Vector3( row[col].x, row[col].y, row[col].z ) ) );
+  syncPatchLabels( patch );
+}
+
+// Lightweight: only update sphere Y positions. Use every animation frame.
+function updateSphereYAnim( patch ) {
+  let idx = 0;
+  for ( let row = 0; row < N; row++ )
+    for ( let col = 0; col < N; col++ )
+      patch.spheres[idx++].position.y = patch.cpData[row][col].y;
+}
+
+function buildPatchSpheres( patch ) {
+  patch.spheres.forEach( s => { s.geometry.dispose(); scene.remove( s ); } );
+  patch.spheres = [];
+  const r   = sphereRadius();
+  const geo = new THREE.SphereGeometry( r, 12, 12 );
+  const isActive = patch.key === activePatchKey;
   for ( let row = 0; row < N; row++ ) {
-    addLine( cpData[row].map( p => new THREE.Vector3( p.x, p.y, p.z ) ) );
+    for ( let col = 0; col < N; col++ ) {
+      const m = new THREE.Mesh( geo, ( isActive ? matNormal : matInactive ).clone() );
+      m.userData.cpRow  = row;
+      m.userData.cpCol  = col;
+      m.userData.patch  = patch;
+      scene.add( m );
+      patch.spheres.push( m );
+    }
   }
-  for ( let col = 0; col < N; col++ ) {
-    addLine( cpData.map( row => new THREE.Vector3( row[col].x, row[col].y, row[col].z ) ) );
-  }
-  syncLabels();
 }
 
-function fullRebuild() {
-  buildSurface();
-  buildSpheres();
-  syncSpheres();
-  document.getElementById('grid-label').textContent = `${N}×${N} control points`;
-  rebuildLabels();
-}
-
-// ─── VISIBILITY STATE ────────────────────────────────────────────────────────
+// ─── LABELS ──────────────────────────────────────────────────────────────────
 
 const vis = { spheres: true, lines: true, texture: true, wire: true, labels: false };
 
-function applyVis() {
-  cpSpheres.forEach( s => { s.visible = vis.spheres; } );
-  latticeGrp.visible     = vis.lines;
-  surfaceMat.map         = vis.texture ? map : null;
-  surfaceMat.color.set( vis.texture ? 0xffffff : 0x3a7abd );
-  surfaceMat.needsUpdate = true;
-  wireOverlay.visible    = vis.wire;
-  labelGroup.visible     = vis.labels;
-}
-
-// ─── CP LABELS (canvas sprites, hidden by default) ───────────────────────────
-
-const labelGroup = new THREE.Group();
-scene.add( labelGroup );
-
 function makeLabelSprite( text ) {
   const canvas  = document.createElement( 'canvas' );
-  canvas.width  = 256;
-  canvas.height = 96;
+  canvas.width  = 256; canvas.height = 96;
   const ctx = canvas.getContext( '2d' );
   ctx.clearRect( 0, 0, 256, 96 );
   ctx.fillStyle = 'rgba(8,12,22,0.82)';
   ctx.beginPath(); ctx.roundRect( 4, 4, 248, 88, 10 ); ctx.fill();
-  ctx.strokeStyle = 'rgba(100,220,255,0.5)';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(100,220,255,0.5)'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.roundRect( 4, 4, 248, 88, 10 ); ctx.stroke();
-  ctx.fillStyle = '#7DF9FF';
-  ctx.font = 'bold 28px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#7DF9FF'; ctx.font = 'bold 26px monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText( text, 128, 48 );
   const tex = new THREE.CanvasTexture( canvas );
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
@@ -697,44 +1059,115 @@ function makeLabelSprite( text ) {
   return sprite;
 }
 
-let labelSprites = [];
-
-function rebuildLabels() {
-  labelSprites.forEach( s => { s.material.map.dispose(); s.material.dispose(); labelGroup.remove( s ); } );
-  labelSprites = [];
+function rebuildPatchLabels( patch ) {
+  patch.labelSprites.forEach( s => { s.material.map.dispose(); s.material.dispose(); patch.labels.remove( s ); } );
+  patch.labelSprites = [];
   const offset = SIZE * 0.06;
   for ( let r = 0; r < N; r++ ) {
     for ( let c = 0; c < N; c++ ) {
-      const p      = cpData[r][c];
-      const sprite = makeLabelSprite( `[${r},${c}]` );
-      sprite.position.set( p.x, p.y + offset, p.z );
-      labelGroup.add( sprite );
-      labelSprites.push( sprite );
+      const p = patch.cpData[r][c];
+      const s = makeLabelSprite( `[${r},${c}]` );
+      s.position.set( p.x, p.y + offset, p.z );
+      patch.labels.add( s );
+      patch.labelSprites.push( s );
     }
   }
-  labelGroup.visible = vis.labels;
+  patch.labels.visible = vis.labels;
 }
 
-function syncLabels() {
+function syncPatchLabels( patch ) {
   if ( !vis.labels ) return;
   const offset = SIZE * 0.06;
   let idx = 0;
   for ( let r = 0; r < N; r++ ) {
     for ( let c = 0; c < N; c++ ) {
-      const p = cpData[r][c];
-      labelSprites[idx++].position.set( p.x, p.y + offset, p.z );
+      const p = patch.cpData[r][c];
+      patch.labelSprites[idx++].position.set( p.x, p.y + offset, p.z );
     }
   }
 }
 
+// ─── VISIBILITY ───────────────────────────────────────────────────────────────
+
+function applyVis() {
+  patches.forEach( patch => {
+    patch.spheres.forEach( s => { s.visible = vis.spheres; } );
+    patch.lattice.visible = vis.lines;
+    patch.wire.visible    = vis.wire;
+    patch.labels.visible  = vis.labels;
+  } );
+  surfaceMat.map = vis.texture ? map : null;
+  surfaceMat.color.set( vis.texture ? 0xffffff : 0x3a7abd );
+  surfaceMat.needsUpdate = true;
+}
+
+// ─── FULL REBUILD (all patches) ──────────────────────────────────────────────
+
+function fullRebuild() {
+  // Destroy all existing patches and recreate with new N/SIZE
+  patches.forEach( ( patch, key ) => {
+    const { qx, qz } = patch;
+    destroyPatch( patch );
+    const np = createPatch( qx, qz );
+    patches.set( key, np );
+  } );
+  setActivePatch( activePatchKey );
+  applyVis();
+}
+
+// ─── QUADRANT NAVIGATOR UI ────────────────────────────────────────────────────
+
+const QN_RANGE = 3; // show -3..+3 around origin → 7×7 grid
+
+function renderQuadNav() {
+  const grid = document.getElementById( 'qn-grid' );
+  grid.innerHTML = '';
+  const size = QN_RANGE * 2 + 1;
+  grid.style.gridTemplateColumns = `repeat(${size}, 28px)`;
+
+  for ( let qzI = QN_RANGE; qzI >= -QN_RANGE; qzI-- ) {
+    for ( let qxI = -QN_RANGE; qxI <= QN_RANGE; qxI++ ) {
+      const key    = `${qxI},${qzI}`;
+      const exists = patches.has( key );
+      const active = key === activePatchKey;
+      const isOrigin = qxI === 0 && qzI === 0;
+
+      const cell = document.createElement( 'div' );
+      cell.className = 'qn-cell' +
+        ( exists ? ' exists' : '' ) +
+        ( active  ? ' active'  : '' ) +
+        ( isOrigin && !exists ? ' origin' : '' );
+
+      if ( exists ) {
+        cell.textContent = `${qxI},${qzI}`;
+        // Delete button (not for last remaining patch)
+        if ( patches.size > 1 ) {
+          const del = document.createElement( 'span' );
+          del.className = 'qn-del'; del.textContent = '×';
+          del.addEventListener( 'click', e => { e.stopPropagation(); removePatch( qxI, qzI ); } );
+          cell.appendChild( del );
+        }
+        cell.addEventListener( 'click', () => setActivePatch( key ) );
+      } else {
+        cell.textContent = '+';
+        cell.addEventListener( 'click', () => addPatch( qxI, qzI ) );
+      }
+      grid.appendChild( cell );
+    }
+  }
+}
+
+document.getElementById('quad-nav').addEventListener( 'pointerdown', e => e.stopPropagation() );
+document.getElementById('quad-nav').addEventListener( 'mousedown',   e => e.stopPropagation() );
+
 // ─── INITIAL BUILD ───────────────────────────────────────────────────────────
 
-fullRebuild();
+patches.set( '0,0', createPatch( 0, 0 ) );
+setActivePatch( '0,0' );
+renderQuadNav();
 
 // ─── PANEL ───────────────────────────────────────────────────────────────────
 
-const cpPanel      = document.getElementById( 'cp-panel' );
-const cpPanelTitle = document.getElementById( 'cp-panel-title' );
 const inputX       = document.getElementById( 'cp-x' );
 const inputY       = document.getElementById( 'cp-y' );
 const inputZ       = document.getElementById( 'cp-z' );
@@ -745,8 +1178,9 @@ cpPanel.addEventListener( 'pointerdown', e => e.stopPropagation() );
 cpPanel.addEventListener( 'mousedown',   e => e.stopPropagation() );
 
 function showPanel( row, col ) {
-  const p = cpData[row][col];
-  cpPanelTitle.textContent = `Control Point [row ${row}, col ${col}]`;
+  const patch = activePatch();
+  const p = patch.cpData[row][col];
+  cpPanelTitle.textContent = `Patch [${patch.qx},${patch.qz}] · CP [${row}, ${col}]`;
   inputX.value = p.x.toFixed(1);
   inputY.value = p.y.toFixed(1);
   inputZ.value = p.z.toFixed(1);
@@ -755,17 +1189,17 @@ function showPanel( row, col ) {
   cpPanel.style.display = 'block';
 }
 
-function hidePanel() { cpPanel.style.display = 'none'; }
-
 function applyXYZ() {
   if ( !selectedSphere ) return;
   const { cpRow: r, cpCol: c } = selectedSphere.userData;
-  cpData[r][c].x = parseFloat( inputX.value ) || 0;
-  cpData[r][c].y = parseFloat( inputY.value ) || 0;
-  cpData[r][c].z = parseFloat( inputZ.value ) || 0;
-  baseY[r][c] = cpData[r][c].y; // record sculpted Y
-  buildSurface();
-  syncSpheres();
+  const patch = activePatch();
+  patch.cpData[r][c].x = parseFloat( inputX.value ) || 0;
+  patch.cpData[r][c].y = parseFloat( inputY.value ) || 0;
+  patch.cpData[r][c].z = parseFloat( inputZ.value ) || 0;
+  patch.baseY[r][c]    = patch.cpData[r][c].y;
+  const affected = propagateEdgePoint( patch, r, c, patch.cpData[r][c].y, patch.cpData[r][c].w );
+  affected.forEach( p => { buildPatchSurface( p ); syncPatchSpheres( p ); } );
+  if ( patches.size > 1 ) blendSeamTangents();
 }
 
 [ inputX, inputY, inputZ ].forEach( inp => {
@@ -776,9 +1210,10 @@ function applyXYZ() {
 weightSlider.addEventListener( 'input', () => {
   if ( !selectedSphere ) return;
   const { cpRow: r, cpCol: c } = selectedSphere.userData;
-  cpData[r][c].w = parseFloat( weightSlider.value );
-  weightVal.textContent = cpData[r][c].w.toFixed(1);
-  buildSurface();
+  const patch = activePatch();
+  patch.cpData[r][c].w = parseFloat( weightSlider.value );
+  weightVal.textContent = patch.cpData[r][c].w.toFixed(1);
+  buildPatchSurface( patch );
 } );
 
 // ─── GRID CONFIG CONTROLS ────────────────────────────────────────────────────
@@ -786,30 +1221,194 @@ weightSlider.addEventListener( 'input', () => {
 const selN    = document.getElementById( 'sel-n' );
 const selSize = document.getElementById( 'sel-size' );
 const selRes  = document.getElementById( 'sel-res' );
+const selNSl    = document.getElementById( 'sel-n-sl' );
+const selSizeSl = document.getElementById( 'sel-size-sl' );
+const selResSl  = document.getElementById( 'sel-res-sl' );
 
-document.getElementById( 'btn-apply' ).addEventListener( 'click', () => {
-  const newN    = parseInt( selN.value );
-  const newSize = parseInt( selSize.value );
-  RES = parseInt( selRes.value );
-  N    = newN;
-  SIZE = newSize;
-  cpData = makeFlat( N, SIZE );
-  baseY  = cpData.map( row => row.map( () => 0 ) );
-  animClock = 0;
+// Keep number input and slider in sync
+function linkInputSlider( inp, sl, onCommit ) {
+  inp.addEventListener( 'input', () => { sl.value = inp.value; onCommit(); } );
+  sl.addEventListener(  'input', () => { inp.value = sl.value; onCommit(); } );
+}
+
+// Debounce helper — waits `ms` after last call before firing
+function debounce( fn, ms ) {
+  let timer;
+  return ( ...args ) => { clearTimeout( timer ); timer = setTimeout( () => fn(...args), ms ); };
+}
+
+// Points/side — rebuilds whole grid (expensive: debounce 300ms)
+const applyN = debounce( () => {
+  const newN = Math.max( 3, Math.min( 20, parseInt( selN.value ) || 12 ) );
+  selN.value = newN; selNSl.value = newN;
+  N = newN;
   deselect();
-  fullRebuild();
+  // Rebuild every patch with new N
+  patches.forEach( ( patch, key ) => {
+    const { qx, qz } = patch;
+    destroyPatch( patch );
+    patches.set( key, createPatch( qx, qz ) );
+  } );
+  setActivePatch( activePatchKey );
+  applyVis();
+}, 300 );
+
+const applySize = debounce( () => {
+  const newSize = Math.max( 100, parseInt( selSize.value ) || 20000 );
+  selSize.value = newSize; selSizeSl.value = newSize;
+  SIZE = newSize;
+  deselect();
+  patches.forEach( ( patch, key ) => {
+    const { qx, qz } = patch;
+    destroyPatch( patch );
+    patches.set( key, createPatch( qx, qz ) );
+  } );
+  setActivePatch( activePatchKey );
+  applyVis();
   camera.position.set( 0, SIZE * 0.8, SIZE * 1.4 );
   orbit.target.set( 0, 0, 0 );
   orbit.update();
-} );
+}, 200 );
+
+const applyRes = debounce( () => {
+  const newRes = Math.max( 4, Math.min( 300, parseInt( selRes.value ) || 200 ) );
+  selRes.value = newRes; selResSl.value = newRes;
+  RES = newRes;
+  patches.forEach( patch => buildPatchSurface( patch ) );
+}, 150 );
+
+linkInputSlider( selN,    selNSl,    applyN    );
+linkInputSlider( selSize, selSizeSl, applySize );
+linkInputSlider( selRes,  selResSl,  applyRes  );
 
 document.getElementById( 'btn-flatten' ).addEventListener( 'click', () => {
+  const patch = activePatch();
   for ( let r = 0; r < N; r++ ) for ( let c = 0; c < N; c++ ) {
-    cpData[r][c].y = 0; cpData[r][c].w = 1; baseY[r][c] = 0;
+    patch.cpData[r][c].y = 0; patch.cpData[r][c].w = 1; patch.baseY[r][c] = 0;
   }
-  buildSurface();
-  syncSpheres();
+  buildPatchSurface( patch );
+  syncPatchSpheres( patch );
+  stitchAllEdges();
   if ( selectedSphere ) showPanel( selectedSphere.userData.cpRow, selectedSphere.userData.cpCol );
+} );
+
+// ─── PATCH ROTATION / FLIP ────────────────────────────────────────────────────
+// After a rotation/flip we want the rotated patch to be authoritative —
+// push its new edge values to neighbours rather than averaging.
+function pushEdgesToNeighbours( patch ) {
+  const { qx, qz } = patch;
+  const dirty = new Set();
+
+  function push( pSrc, rS, cS, pDst, rD, cD ) {
+    const y = pSrc.baseY[rS][cS];
+    const w = pSrc.cpData[rS][cS].w;
+    pDst.cpData[rD][cD].y = y;
+    pDst.cpData[rD][cD].w = w;
+    pDst.baseY[rD][cD]    = y;
+    dirty.add( pDst );
+  }
+
+  const pL = getPatch( qx-1, qz );
+  const pR = getPatch( qx+1, qz );
+  const pB = getPatch( qx,   qz-1 );
+  const pT = getPatch( qx,   qz+1 );
+
+  if ( pL ) for ( let r = 0; r < N; r++ ) push( patch, r, 0,   pL, r, N-1 );
+  if ( pR ) for ( let r = 0; r < N; r++ ) push( patch, r, N-1, pR, r, 0   );
+  if ( pB ) for ( let c = 0; c < N; c++ ) push( patch, 0,   c, pB, N-1, c );
+  if ( pT ) for ( let c = 0; c < N; c++ ) push( patch, N-1, c, pT, 0,   c );
+
+  // Diagonal corners
+  const corners = [
+    [ getPatch(qx-1,qz-1), N-1, N-1, 0,   0   ],
+    [ getPatch(qx+1,qz-1), N-1, 0,   0,   N-1 ],
+    [ getPatch(qx-1,qz+1), 0,   N-1, N-1, 0   ],
+    [ getPatch(qx+1,qz+1), 0,   0,   N-1, N-1 ],
+  ];
+  for ( const [pn, rs, cs, rd, cd] of corners ) {
+    if ( pn ) push( patch, rs, cs, pn, rd, cd );
+  }
+
+  dirty.forEach( p => { buildPatchSurface( p ); syncPatchSpheres( p ); } );
+}
+
+function rotatePatchY( patch, steps ) {
+  // Snapshot what the surface LOOKS LIKE right now (cpData.y includes any animation offset)
+  // and bake it into baseY so the rotation is applied to the visible shape.
+  for ( let s = 0; s < steps; s++ ) {
+    // Take snapshots before any writes
+    const snapY = patch.cpData.map( row => row.map( p => p.y ) );
+    const snapW = patch.cpData.map( row => row.map( p => p.w ) );
+
+    // 90° CW: new[r][c] = old[N-1-c][r]
+    for ( let r = 0; r < N; r++ ) {
+      for ( let c = 0; c < N; c++ ) {
+        const y = snapY[ N-1-c ][ r ];
+        const w = snapW[ N-1-c ][ r ];
+        patch.cpData[r][c].y = y;
+        patch.cpData[r][c].w = w;
+        patch.baseY[r][c]    = y;   // bake animated value as new sculpted base
+      }
+    }
+  }
+
+  deselect();
+  buildPatchSurface( patch );
+  syncPatchSpheres( patch );
+  pushEdgesToNeighbours( patch );
+}
+
+function flipPatchY( patch, axis ) {
+  const snapY = patch.cpData.map( row => row.map( p => p.y ) );
+  const snapW = patch.cpData.map( row => row.map( p => p.w ) );
+  const half  = Math.floor( N / 2 );
+
+  for ( let r = 0; r < N; r++ ) {
+    for ( let c = 0; c < half; c++ ) {
+      const ar = axis === 'z' ? c         : r;
+      const ac = axis === 'z' ? r         : c;
+      const br = axis === 'z' ? N - 1 - c : r;
+      const bc = axis === 'z' ? r         : N - 1 - c;
+
+      patch.cpData[ar][ac].y = snapY[br][bc];
+      patch.cpData[br][bc].y = snapY[ar][ac];
+      patch.cpData[ar][ac].w = snapW[br][bc];
+      patch.cpData[br][bc].w = snapW[ar][ac];
+      patch.baseY[ar][ac]    = snapY[br][bc];
+      patch.baseY[br][bc]    = snapY[ar][ac];
+    }
+  }
+
+  deselect();
+  buildPatchSurface( patch );
+  syncPatchSpheres( patch );
+  pushEdgesToNeighbours( patch );
+}
+
+document.getElementById('btn-rot90' ).addEventListener('click', () => {
+  const wasPlaying = anim.playing; anim.playing = false;
+  rotatePatchY( activePatch(), 1 );
+  anim.playing = wasPlaying;
+} );
+document.getElementById('btn-rot180').addEventListener('click', () => {
+  const wasPlaying = anim.playing; anim.playing = false;
+  rotatePatchY( activePatch(), 2 );
+  anim.playing = wasPlaying;
+} );
+document.getElementById('btn-rot270').addEventListener('click', () => {
+  const wasPlaying = anim.playing; anim.playing = false;
+  rotatePatchY( activePatch(), 3 );
+  anim.playing = wasPlaying;
+} );
+document.getElementById('btn-flipx' ).addEventListener('click', () => {
+  const wasPlaying = anim.playing; anim.playing = false;
+  flipPatchY( activePatch(), 'x' );
+  anim.playing = wasPlaying;
+} );
+document.getElementById('btn-flipz' ).addEventListener('click', () => {
+  const wasPlaying = anim.playing; anim.playing = false;
+  flipPatchY( activePatch(), 'z' );
+  anim.playing = wasPlaying;
 } );
 
 // Prevent grid controls bubbling to canvas
@@ -896,8 +1495,6 @@ document.getElementById('light-controls').addEventListener( 'mousedown',   e => 
 
 // ─── SELECTION & DRAG ────────────────────────────────────────────────────────
 
-let selectedSphere = null;
-let hoveredSphere  = null;
 const raycaster    = new THREE.Raycaster();
 const mouse        = new THREE.Vector2();
 const dragPlane    = new THREE.Plane();
@@ -909,26 +1506,30 @@ function toNDC( cx, cy ) {
   mouse.y = -( cy / window.innerHeight ) * 2 + 1;
 }
 
+function allSpheres() {
+  const out = [];
+  patches.forEach( p => out.push( ...p.spheres ) );
+  return out;
+}
+
 function hitSphere( cx, cy ) {
   toNDC( cx, cy );
   raycaster.setFromCamera( mouse, camera );
-  const hits = raycaster.intersectObjects( cpSpheres );
+  const hits = raycaster.intersectObjects( allSpheres() );
   return hits.length ? hits[0].object : null;
 }
 
 function selectSphere( sphere ) {
-  if ( selectedSphere === sphere ) return;
-  if ( selectedSphere ) {
-    selectedSphere.material = matNormal.clone();
+  // If sphere belongs to a different patch, switch to that patch first
+  const spherePatch = sphere.userData.patch;
+  if ( spherePatch && spherePatch.key !== activePatchKey ) {
+    setActivePatch( spherePatch.key );
   }
+  if ( selectedSphere === sphere ) return;
+  if ( selectedSphere ) selectedSphere.material = matNormal.clone();
   selectedSphere = sphere;
   sphere.material = matSelected.clone();
   showPanel( sphere.userData.cpRow, sphere.userData.cpCol );
-}
-
-function deselect() {
-  if ( selectedSphere ) { selectedSphere.material = matNormal.clone(); selectedSphere = null; }
-  hidePanel();
 }
 
 // Capture-phase listeners so we fire before OrbitControls
@@ -953,16 +1554,18 @@ renderer.domElement.addEventListener( 'pointermove', e => {
     const hit = new THREE.Vector3();
     if ( raycaster.ray.intersectPlane( dragPlane, hit ) ) {
       const newPos = hit.sub( dragOffset );
-      const { cpRow: r, cpCol: c } = selectedSphere.userData;
-      cpData[r][c].x = newPos.x;
-      cpData[r][c].y = newPos.y;
-      cpData[r][c].z = newPos.z;
-      baseY[r][c]    = newPos.y; // record sculpted Y
+      const { cpRow: r, cpCol: c, patch: dragPatch } = selectedSphere.userData;
+      dragPatch.cpData[r][c].x = newPos.x;
+      dragPatch.cpData[r][c].y = newPos.y;
+      dragPatch.cpData[r][c].z = newPos.z;
+      dragPatch.baseY[r][c]    = newPos.y;
       inputX.value = newPos.x.toFixed(1);
       inputY.value = newPos.y.toFixed(1);
       inputZ.value = newPos.z.toFixed(1);
-      buildSurface();
-      syncSpheres();
+      // Propagate Y to neighbours if on an edge, then rebuild all affected patches
+      const affected = propagateEdgePoint( dragPatch, r, c, newPos.y, dragPatch.cpData[r][c].w );
+      affected.forEach( p => { buildPatchSurface( p ); syncPatchSpheres( p ); } );
+      if ( patches.size > 1 ) blendSeamTangents();
     }
   }
 }, true );
@@ -1084,13 +1687,37 @@ acSelect( 'anim-z-inf',   anim.z, 'influence' );
 
 // Preset expressions for each named function
 const PRESETS = {
-  sin:    'sin(t)',
-  cos:    'cos(t)',
-  tri:    '(2/PI) * asin(sin(t))',
-  sqr:    'sign(sin(t))',
-  saw:    '((t/PI) % 2 + 2) % 2 - 1',
-  circle: 'sqrt(max(0, 1 - (((t%(2*PI))/PI)-1)**2)) * sign(sin(t))',
-  none:   '0',
+  // Basic
+  sin:       'sin(t)',
+  cos:       'cos(t)',
+  tri:       '(2/PI) * asin(sin(t))',
+  sqr:       'sign(sin(t))',
+  saw:       '((t/PI) % 2 + 2) % 2 - 1',
+  rsaw:      '1 - ((t/PI) % 2 + 2) % 2',
+  // Shaped
+  abs:       'abs(sin(t))',
+  rectcos:   'abs(cos(t))',
+  pulse:     'sin(t) > 0.85 ? 1 : 0',
+  trapezoid: 'max(-1, min(1, 2.5 * sin(t)))',
+  circle:    'sqrt(max(0, 1-(((t%(2*PI))/PI)-1)**2)) * sign(sin(t))',
+  smooth:    '(sin(t)*0.5+0.5) * (sin(t)*0.5+0.5) * (3 - 2*(sin(t)*0.5+0.5)) * 2 - 1',
+  // Modulated
+  am:        'sin(t) * sin(t * 0.25)',
+  fm:        'sin(t + sin(t * 0.5) * 2)',
+  beating:   '(sin(t) + sin(t * 1.05)) * 0.5',
+  chirp:     'sin(t * (1 + clock * 0.1 % 3))',
+  sinc:      '(t % (2*PI)) !== 0 ? sin(t)/t * PI : 1',
+  // Terrain
+  ridge:     '1 - 2*abs(sin(t))',
+  terrace:   'floor(sin(t) * 3) / 3',
+  ripple:    'sin(sqrt(normX*normX + normZ*normZ) * 10 - clock * 3)',
+  damp:      'sin(t) * exp(-normX * 2)',
+  noise:     'sin(t * 7.3) * 0.5 + sin(t * 3.1 + normX*4) * 0.3 + sin(t * 13.7 + normZ*6) * 0.2',
+  // Other
+  exp:       '(exp(-abs(sin(t))*2) - 0.5) * 2',
+  sigmoid:   '2 / (1 + exp(-sin(t) * 4)) - 1',
+  heartbeat: 'sin(t) > 0 ? pow(sin(t), 0.3) * 2 - 1 : sin(t * 0.3) * 0.2 - 0.9',
+  none:      '0',
 };
 
 // When preset chosen → write its formula into the text box and recompile
@@ -1145,62 +1772,85 @@ document.getElementById('btn-reset').addEventListener('click', () => {
 document.getElementById('anim-controls').addEventListener( 'pointerdown', e => e.stopPropagation() );
 document.getElementById('anim-controls').addEventListener( 'mousedown',   e => e.stopPropagation() );
 
-// Normalised position of each control point along its axis [0..1]
+// Local normalised position [0..1] within a patch
 function normX( col ) { return N > 1 ? col / ( N - 1 ) : 0.5; }
 function normZ( row ) { return N > 1 ? row / ( N - 1 ) : 0.5; }
+
+// World-normalised position — continuous across patch boundaries.
+// patch [qx,qz] col c → worldNX = qx + col/(N-1)
+// Adjacent patches share the same worldNX at their boundary:
+//   patch[0,0] col N-1 → 0+1 = 1   patch[1,0] col 0 → 1+0 = 1  ✓
+function worldNX( patch, col ) { return patch.qx + normX( col ); }
+function worldNZ( patch, row ) { return patch.qz + normZ( row ); }
+
+let wireUpdateCounter = 0;
 
 function tickAnimation( dt ) {
   if ( anim.playing ) animClock += dt * anim.speed;
 
-  const TAU   = 2 * Math.PI;
-  const xA    = anim.x, zA    = anim.z;
-  let   dirty = false;
+  const TAU = 2 * Math.PI;
+  const xA  = anim.x, zA = anim.z;
+  wireUpdateCounter++;
 
-  for ( let r = 0; r < N; r++ ) {
-    for ( let c = 0; c < N; c++ ) {
-      // --- X-axis wave ---
-      let xArg;
-      switch ( xA.influence ) {
-        case 'per-col':  xArg = normX(c) * TAU * xA.freq + animClock * TAU * xA.freq + xA.phase; break;
-        case 'per-row':  xArg = normZ(r) * TAU * xA.freq + animClock * TAU * xA.freq + xA.phase; break;
-        default:         xArg = animClock * TAU * xA.freq + xA.phase; break;
-      }
-      const xVal = evalWave( 'x', xArg, c, r, normX(c), normZ(r) ) * xA.amp;
+  // ── Pass 1: compute wave Y for every control point on every patch ──
+  const dirtyPatches = new Set();
+  patches.forEach( patch => {
+    for ( let r = 0; r < N; r++ ) {
+      for ( let c = 0; c < N; c++ ) {
+        const wnx = worldNX( patch, c );
+        const wnz = worldNZ( patch, r );
 
-      // --- Z-axis wave ---
-      let zArg;
-      switch ( zA.influence ) {
-        case 'per-col':  zArg = normX(c) * TAU * zA.freq + animClock * TAU * zA.freq + zA.phase; break;
-        case 'per-row':  zArg = normZ(r) * TAU * zA.freq + animClock * TAU * zA.freq + zA.phase; break;
-        default:         zArg = animClock * TAU * zA.freq + zA.phase; break;
-      }
-      const zVal = evalWave( 'z', zArg, c, r, normX(c), normZ(r) ) * zA.amp;
+        let xArg;
+        switch ( xA.influence ) {
+          case 'per-col': xArg = wnx * TAU * xA.freq + animClock * TAU * xA.freq + xA.phase; break;
+          case 'per-row': xArg = wnz * TAU * xA.freq + animClock * TAU * xA.freq + xA.phase; break;
+          default:        xArg = animClock * TAU * xA.freq + xA.phase; break;
+        }
+        const xVal = evalWave( 'x', xArg, c, r, wnx, wnz ) * xA.amp;
 
-      // --- Superposition ---
-      let combined;
-      switch ( anim.combine ) {
-        case 'multiply': combined = ( xVal / Math.max(1, xA.amp) ) * ( zVal / Math.max(1, zA.amp) ) * Math.max( xA.amp, zA.amp ); break;
-        case 'max':      combined = Math.max( xVal, zVal ); break;
-        case 'min':      combined = Math.min( xVal, zVal ); break;
-        default:         combined = xVal + zVal; break; // add
-      }
+        let zArg;
+        switch ( zA.influence ) {
+          case 'per-col': zArg = wnx * TAU * zA.freq + animClock * TAU * zA.freq + zA.phase; break;
+          case 'per-row': zArg = wnz * TAU * zA.freq + animClock * TAU * zA.freq + zA.phase; break;
+          default:        zArg = animClock * TAU * zA.freq + zA.phase; break;
+        }
+        const zVal = evalWave( 'z', zArg, c, r, wnx, wnz ) * zA.amp;
 
-      const newY = baseY[r][c] + combined;
-      if ( Math.abs( newY - cpData[r][c].y ) > 0.01 ) {
-        cpData[r][c].y = newY;
-        dirty = true;
+        let combined;
+        switch ( anim.combine ) {
+          case 'multiply': combined = ( xVal / Math.max(1, xA.amp) ) * ( zVal / Math.max(1, zA.amp) ) * Math.max( xA.amp, zA.amp ); break;
+          case 'max':      combined = Math.max( xVal, zVal ); break;
+          case 'min':      combined = Math.min( xVal, zVal ); break;
+          default:         combined = xVal + zVal; break;
+        }
+
+        const newY = patch.baseY[r][c] + combined;
+        if ( Math.abs( newY - patch.cpData[r][c].y ) > 0.01 ) {
+          patch.cpData[r][c].y = newY;
+          dirtyPatches.add( patch );
+        }
       }
     }
-  }
+  } );
 
-  if ( dirty ) {
-    buildSurface();
-    syncSpheres();
-    // Keep CP panel Y in sync if a point is selected
-    if ( selectedSphere ) {
-      const { cpRow: r, cpCol: c } = selectedSphere.userData;
-      inputY.value = cpData[r][c].y.toFixed(1);
+  // ── Pass 2: blend inner rows/cols for C1 tangent continuity at seams ──
+  // Must run AFTER all patches have their wave Y, BEFORE any surface rebuild.
+  if ( patches.size > 1 ) blendSeamTangentsAnim();
+
+  // ── Pass 3: rebuild dirty patches ──
+  dirtyPatches.forEach( patch => {
+    updatePatchSurfaceAnim( patch );
+    if ( vis.spheres ) updateSphereYAnim( patch );
+    if ( vis.wire && wireUpdateCounter % 30 === 0 ) {
+      patch.wire.geometry.dispose();
+      patch.wire.geometry = new THREE.WireframeGeometry( patch.mesh.geometry );
     }
+  } );
+
+  // Keep CP panel Y in sync if a point is selected
+  if ( selectedSphere ) {
+    const { cpRow: r, cpCol: c, patch } = selectedSphere.userData;
+    if ( patch ) inputY.value = patch.cpData[r][c].y.toFixed(1);
   }
 }
 
@@ -1224,5 +1874,6 @@ function animate( timestamp ) {
 }
 requestAnimationFrame( animate );
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"version":"2024.11.0","token":"2b6706b8d5d74058872df354eb2574c4","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
